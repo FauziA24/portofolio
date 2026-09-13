@@ -18,7 +18,7 @@ services:
           - portfolio-api
           - api
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-portfolio}:${POSTGRES_PASSWORD:-portfolio}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-portfolio}
+      DATABASE_URL: ${DATABASE_URL}
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-5}
       PORT: 3001
       LOG_LEVEL: ${LOG_LEVEL:-info}
