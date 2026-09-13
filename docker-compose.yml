@@ -25,9 +25,6 @@ services:
       TRUST_PROXY: "true"
       API_BODY_LIMIT_BYTES: ${API_BODY_LIMIT_BYTES:-6291456}
       CORS_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost}
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-change-this-admin-token-32chars}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@portfolio.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-this-admin-password}
       S3_ENDPOINT: ${S3_ENDPOINT:-http://seaweedfs:8333}
       S3_REGION: ${S3_REGION:-auto}
       S3_BUCKET: ${S3_BUCKET:-portfolio}

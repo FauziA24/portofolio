@@ -489,11 +489,14 @@ main > .research-section { overflow: visible; background: var(--surface); }
 .email-button { --button-hover-bg: #e5484d; }
 .linkedin-button { --button-hover-bg: #0a66c2; }
 .github-button { --button-hover-bg: #6b7280; }
-.show-more-button { position: relative; min-width: min(100%, 390px); overflow: hidden; isolation: isolate; background: transparent !important; color: var(--foreground) !important; border: 1px solid var(--border) !important; transition: background .25s ease, border-color .25s ease, color .25s ease, transform .25s ease; }
-.show-more-button:hover, .show-more-button:focus-visible { background: var(--accent) !important; border-color: var(--accent) !important; color: var(--accent-fg) !important; transform: translate3d(var(--magnet-x, 0px), calc(var(--magnet-y, 0px) - 2px), 0) scale(1.03); }
-.show-more-label { position: relative; z-index: 2; opacity: 0; transition: opacity .2s ease; }
-.show-more-marquee { position: absolute; top: 0; bottom: 0; left: 0; z-index: 1; display: flex; align-items: center; width: max-content; white-space: nowrap; opacity: 1; animation: show-more-marquee 8s linear infinite; }
-.show-more-button:hover .show-more-label, .show-more-button:focus-visible .show-more-label { opacity: 1; }
+.show-more-button { --button-hover-bg: var(--accent); --button-hover-fg: var(--accent-fg); min-width: min(100%, 420px); min-height: 52px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 5%, transparent); }
+.show-more-button::after { content: ""; position: absolute; inset: 7px; z-index: 0; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: inherit; opacity: 0; transform: scaleX(.82); transition: opacity .35s ease, transform .45s cubic-bezier(.16,1,.3,1); }
+.show-more-button:hover::after, .show-more-button:focus-visible::after { opacity: .7; transform: scaleX(1); }
+.show-more-label { position: relative; z-index: 2; opacity: 0; transform: translateY(8px); transition: opacity .2s ease, transform .35s cubic-bezier(.16,1,.3,1); }
+.show-more-spark { position: absolute; right: 18px; z-index: 2; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: -16px 0 0 color-mix(in srgb, currentColor 60%, transparent), -32px 0 0 color-mix(in srgb, currentColor 28%, transparent); opacity: .55; transition: opacity .25s ease, transform .35s cubic-bezier(.16,1,.3,1); }
+.show-more-marquee { position: absolute; top: 0; bottom: 0; left: 0; z-index: 1; display: flex; align-items: center; width: max-content; padding-left: 18px; white-space: nowrap; opacity: 1; animation: show-more-marquee 8s linear infinite; }
+.show-more-button:hover .show-more-label, .show-more-button:focus-visible .show-more-label { opacity: 1; transform: translateY(0); }
+.show-more-button:hover .show-more-spark, .show-more-button:focus-visible .show-more-spark { opacity: 0; transform: translateX(28px) scale(.6); }
 .show-more-button:hover .show-more-marquee, .show-more-button:focus-visible .show-more-marquee { opacity: 0; animation-play-state: paused; }
 @keyframes show-more-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .project-gallery { border-top: 1px solid var(--border); padding-top: 18px; }

@@ -15,7 +15,6 @@ const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 export type AdminAuthConfig = {
   adminEmail: string;
   adminPassword?: string;
-  adminToken: string;
 };
 
 export type AdminSession = {

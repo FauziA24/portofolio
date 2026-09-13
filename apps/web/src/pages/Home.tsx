@@ -348,11 +348,12 @@ function WorkSection() {
             <div className="flex justify-center pt-10">
               <Link
                 to="/projects"
-                className="show-more-button magnetic inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold text-sm font-display"
+                className="creative-button show-more-button magnetic inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold text-sm font-display"
               >
                 <span className="show-more-label">
-                  Show more project <span aria-hidden="true">↗</span>
+                  Show more project 
                 </span>
+                <span className="show-more-spark" aria-hidden="true" />
                 <span className="show-more-marquee" aria-hidden="true">
                   <span>
                     let's see the projects that have been created&nbsp; · &nbsp;

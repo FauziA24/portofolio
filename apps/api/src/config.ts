@@ -23,7 +23,7 @@ const configSchema = z.object({
     .positive()
     .default(6 * 1024 * 1024),
   CORS_ORIGIN: z.string().url().default("http://localhost:5173"),
-  ADMIN_TOKEN: z.string().min(16),
+  ADMIN_TOKEN: z.string().min(16).optional(),
   ADMIN_EMAIL: z.string().email().default("admin@portfolio.local"),
   ADMIN_PASSWORD: z.string().min(8).optional(),
   S3_ENDPOINT: z.string().url(),

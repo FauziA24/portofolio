@@ -25,15 +25,18 @@ for (const project of projects) {
   }
 }
 
-const adminPasswordHash = await createPasswordHash(config.ADMIN_PASSWORD ?? config.ADMIN_TOKEN);
-await db.insert(adminUsers).values({
-  id: "admin-default",
-  email: config.ADMIN_EMAIL.toLowerCase(),
-  passwordHash: adminPasswordHash
-}).onConflictDoUpdate({
-  target: adminUsers.email,
-  set: { passwordHash: adminPasswordHash, updatedAt: new Date() }
-});
+const adminPassword = config.ADMIN_PASSWORD ?? config.ADMIN_TOKEN;
+if (adminPassword) {
+  const adminPasswordHash = await createPasswordHash(adminPassword);
+  await db.insert(adminUsers).values({
+    id: "admin-default",
+    email: config.ADMIN_EMAIL.toLowerCase(),
+    passwordHash: adminPasswordHash
+  }).onConflictDoUpdate({
+    target: adminUsers.email,
+    set: { passwordHash: adminPasswordHash, updatedAt: new Date() }
+  });
+}
 
 await db.insert(siteProfiles).values({
   id: "default",

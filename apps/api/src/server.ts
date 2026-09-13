@@ -94,7 +94,6 @@ export function buildServer() {
     prefix: "/api",
     adminEmail: config.ADMIN_EMAIL,
     adminPassword: config.ADMIN_PASSWORD,
-    adminToken: config.ADMIN_TOKEN,
   });
   app.addHook("onClose", async () => {
     storage.destroy();
