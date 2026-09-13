@@ -2,7 +2,7 @@
 
 Personal portfolio for Mohammad Fauzi Aziz, with a public website, project detail pages, research and credential sections, contact links, and a private CMS for managing content without editing code.
 
-This is a PNPM monorepo with a React/Vite frontend and a Fastify API. Data is stored in PostgreSQL through Drizzle ORM, while uploaded media is stored in S3-compatible object storage. The production Docker setup runs only the portfolio API and connects to existing PostgreSQL, SeaweedFS S3, and Nginx services on the server.
+This is a PNPM monorepo with a React/Vite frontend and a Fastify API. Data is stored in PostgreSQL through Drizzle ORM, while uploaded media is stored in S3-compatible object storage. The production Docker setup runs the portfolio API and web containers, then connects them to existing PostgreSQL, SeaweedFS S3, and Nginx services on the server.
 
 ## Features
 
@@ -13,7 +13,7 @@ This is a PNPM monorepo with a React/Vite frontend and a Fastify API. Data is st
 - Fastify API with Swagger UI at `/docs`.
 - S3-compatible media uploads with asset metadata and project galleries.
 - Basic SEO support: sitemap, robots.txt, project metadata, canonical URLs, and indexing controls.
-- Docker Compose setup for running the API inside the server's existing Docker networks.
+- Docker Compose setup for running the API and web containers inside the server's existing Docker networks.
 
 ## Tech Stack
 
@@ -34,8 +34,8 @@ This is a PNPM monorepo with a React/Vite frontend and a Fastify API. Data is st
 |   `-- web/                 # React/Vite frontend and admin UI
 |-- docs/                    # Product, architecture, roadmap, and deployment notes
 |-- scripts/                 # Smoke tests, traffic tests, static server, visual checks
-|-- docker-compose.yml       # API container attached to external server networks
-|-- Dockerfile               # API image build
+|-- docker-compose.yml       # API and web containers attached to external server networks
+|-- Dockerfile               # API and web image builds
 |-- package.json             # Root monorepo scripts
 `-- pnpm-workspace.yaml
 ```
@@ -112,13 +112,22 @@ Set `VITE_API_URL` if the API does not run at `http://localhost:3001`.
 
 ## Docker Deployment
 
-Docker Compose runs only the `api` service. PostgreSQL, SeaweedFS S3, and Nginx are expected to already exist on the server.
+Docker Compose runs `api` and `web` from published Docker images. PostgreSQL, SeaweedFS S3, and the public Nginx reverse proxy are expected to already exist on the server.
 
-The API container joins three external Docker networks:
+The containers join these external Docker networks:
 
 - `service_service_network`: service network for Nginx and SeaweedFS.
 - `database_database_network`: database network for PostgreSQL.
 - `project_network`: shared network for server projects.
+
+Build and push the images from your development machine:
+
+```bash
+docker build --target app -t fauzia24/portofolio-api:v1.0.0 .
+docker build --target web -t fauzia24/portofolio-web:v1.0.0 .
+docker push fauzia24/portofolio-api:v1.0.0
+docker push fauzia24/portofolio-web:v1.0.0
+```
 
 Prepare the server environment:
 
@@ -129,52 +138,42 @@ cp .env.docker.example .env
 Example production `.env`:
 
 ```env
-PUBLIC_ORIGIN=https://your-domain.com
+PUBLIC_ORIGIN=https://portofolio.jikss.my.id
 
-SERVICE_NETWORK=service_service_network
-DATABASE_NETWORK=database_database_network
-PROJECT_NETWORK=project_network
-
-POSTGRES_HOST=postgres
-POSTGRES_DB=portfolio
-POSTGRES_USER=portfolio
-POSTGRES_PASSWORD=replace-with-server-password
+DATABASE_URL=postgresql://postgres:postgres@postgresql:5432/portofolio
+DATABASE_POOL_MAX=5
 
 ADMIN_EMAIL=admin@your-domain.com
 ADMIN_PASSWORD=replace-with-a-strong-password
 ADMIN_TOKEN=replace-with-a-long-random-token
 
-S3_ENDPOINT=http://seaweedfs:8333
+S3_ENDPOINT=http://seaweed-s3:8333
 S3_BUCKET=portfolio
 S3_ACCESS_KEY_ID=replace-with-s3-access-key
 S3_SECRET_ACCESS_KEY=replace-with-s3-secret-key
 ```
 
-Start the API:
+Start the containers on the server:
 
 ```bash
-docker compose up --build -d
+docker compose pull
+docker compose up -d
 ```
 
-Build the frontend static files:
+Nginx should reverse proxy to the containers:
 
-```bash
-pnpm --filter @portfolio/web build
-```
-
-Nginx should serve `apps/web/dist` as the static root and proxy:
-
+- `/` to `http://portfolio-web:80`
 - `/api/` to `http://portfolio-api:3001`
 - `/docs/` to `http://portfolio-api:3001`
 - `/health` to `http://portfolio-api:3001/health`
 - `/health/storage` to `http://portfolio-api:3001/health/storage`
 - `/sitemap.xml` to `http://portfolio-api:3001/sitemap.xml`
 - `/robots.txt` to `http://portfolio-api:3001/robots.txt`
-- `/s3/` to `http://seaweedfs:8333/`
+- `/s3/` to `http://seaweed-s3:8333/`
 
-If the server uses different container names, update `POSTGRES_HOST` and `S3_ENDPOINT`. Nginx can reach the API as `portfolio-api` because Docker Compose assigns that alias on `service_service_network`.
+If the server uses different container names, update `DATABASE_URL` and `S3_ENDPOINT`. Nginx can reach the app as `portfolio-web` and `portfolio-api` because Docker Compose assigns those aliases on `service_service_network`.
 
-When the API container starts, it runs database migrations, checks or creates the storage bucket, seeds initial data, and then starts the server.
+When the API container starts, it runs database migrations, checks or creates the storage bucket, seeds initial data, and then starts the server. The web container serves the built frontend through Nginx.
 
 ## Scripts
 
@@ -227,17 +226,12 @@ When the API container starts, it runs database migrations, checks or creates th
 | Variable | Description |
 | --- | --- |
 | `PUBLIC_ORIGIN` | Public origin used by CORS, sitemap, and media URLs |
-| `SERVICE_NETWORK` | External service network for Nginx and SeaweedFS |
-| `DATABASE_NETWORK` | External database network for PostgreSQL |
-| `PROJECT_NETWORK` | External shared project network |
-| `POSTGRES_HOST` | PostgreSQL hostname inside `DATABASE_NETWORK` |
-| `POSTGRES_DB` | Database name |
-| `POSTGRES_USER` | PostgreSQL user |
-| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `DATABASE_URL` | PostgreSQL connection URL used by the API container |
+| `DATABASE_POOL_MAX` | Maximum database pool connections |
 | `ADMIN_EMAIL` | Admin seed email |
 | `ADMIN_PASSWORD` | Admin seed password |
 | `ADMIN_TOKEN` | Fallback admin secret |
-| `S3_ENDPOINT` | Internal S3 endpoint, for example `http://seaweedfs:8333` |
+| `S3_ENDPOINT` | Internal S3 endpoint, for example `http://seaweed-s3:8333` |
 | `S3_BUCKET` | Media bucket |
 | `S3_ACCESS_KEY_ID` | SeaweedFS/S3 access key |
 | `S3_SECRET_ACCESS_KEY` | SeaweedFS/S3 secret key |
@@ -322,9 +316,9 @@ The detailed production checklist is available in `docs/production-readiness.md`
 - Set `PUBLIC_ORIGIN` to the final domain.
 - Set `TRUST_PROXY=true` only when the API is behind a trusted reverse proxy or load balancer.
 - Serve media from object storage or a CDN through `S3_PUBLIC_URL`.
-- Serve the frontend as a static build from `apps/web/dist`.
+- Serve the frontend through the `portfolio-web` container.
 - Fastify should run as a long-running service rather than a serverless function if uploads or traffic increase.
-- If Nginx runs in Docker, it must share `service_service_network` with `portfolio-api`.
+- If Nginx runs in Docker, it must share `service_service_network` with `portfolio-web` and `portfolio-api`.
 
 ## Additional Documentation
 
