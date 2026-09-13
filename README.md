@@ -1,19 +1,19 @@
 # Fauzi Portfolio
 
-Portfolio pribadi Mohammad Fauzi Aziz yang menampilkan profil, selected work, riset/sertifikasi, kontak, halaman detail proyek, dan CMS admin untuk mengelola konten tanpa perlu mengubah kode.
+Personal portfolio for Mohammad Fauzi Aziz, with a public website, project detail pages, research and credential sections, contact links, and a private CMS for managing content without editing code.
 
-Proyek ini berbentuk PNPM monorepo dengan frontend React/Vite dan backend Fastify. Data disimpan di PostgreSQL melalui Drizzle ORM, sedangkan media disimpan di object storage S3-compatible. Untuk deployment production-style, repository ini menyediakan Docker Compose untuk container aplikasi yang memakai PostgreSQL, SeaweedFS S3, dan Nginx eksternal di server.
+This is a PNPM monorepo with a React/Vite frontend and a Fastify API. Data is stored in PostgreSQL through Drizzle ORM, while uploaded media is stored in S3-compatible object storage. The production Docker setup runs only the portfolio API and connects to existing PostgreSQL, SeaweedFS S3, and Nginx services on the server.
 
-## Fitur Utama
+## Features
 
-- Halaman publik portfolio dengan hero, profil, selected projects, riset, kontak, dan detail proyek.
-- Visual interaktif berbasis React Three Fiber/Three.js, dengan fallback agar pengalaman tetap ringan.
-- CMS admin di `/admin` untuk mengelola profil, facts, proyek, media, research, contact links, featured projects, dan site settings.
-- Login admin memakai HttpOnly cookie, database-backed session, dan CSRF token.
-- API Fastify dengan Swagger UI di `/docs`.
-- Upload media ke storage S3-compatible, termasuk metadata aset dan galeri proyek.
-- SEO dasar: sitemap, robots.txt, metadata proyek, canonical URL, dan kontrol indexing.
-- Docker Compose siap pakai untuk menjalankan container aplikasi di network server.
+- Public portfolio pages for profile, selected work, research, contact, and project details.
+- Interactive visuals built with React Three Fiber/Three.js, with fallback behavior for lighter devices.
+- Admin CMS at `/admin` for profile, facts, projects, media, research, contact links, featured projects, and site settings.
+- Admin login with HttpOnly cookies, database-backed sessions, and CSRF tokens.
+- Fastify API with Swagger UI at `/docs`.
+- S3-compatible media uploads with asset metadata and project galleries.
+- Basic SEO support: sitemap, robots.txt, project metadata, canonical URLs, and indexing controls.
+- Docker Compose setup for running the API inside the server's existing Docker networks.
 
 ## Tech Stack
 
@@ -21,53 +21,51 @@ Proyek ini berbentuk PNPM monorepo dengan frontend React/Vite dan backend Fastif
 - Frontend: React 19, Vite 6, TypeScript, React Router, Tailwind CSS 4, Framer Motion, Lucide React, Three.js, React Three Fiber
 - Backend: Node.js, Fastify 5, Zod, Drizzle ORM
 - Database: PostgreSQL 16
-- Storage: S3-compatible object storage, default Docker memakai SeaweedFS
-- Reverse proxy: Nginx
+- Storage: S3-compatible object storage, usually SeaweedFS on the server
+- Reverse proxy: existing Nginx service on the server
 - Testing: Node test runner via `tsx --test`
 
-## Struktur Proyek
+## Project Structure
 
 ```text
 .
-├── apps/
-│   ├── api/                 # Fastify API, Drizzle schema, migrations, tests
-│   └── web/                 # React/Vite frontend dan admin UI
-├── docs/                    # Catatan produk, arsitektur, roadmap, deployment
-├── nginx/                   # Peta route untuk Nginx eksternal
-├── scripts/                 # Smoke test, traffic test, static server, visual checks
-├── seaweedfs/               # Konfigurasi S3 credentials untuk SeaweedFS
-├── docker-compose.yml       # Container API + web static di network eksternal
-├── Dockerfile               # Build image API dan web static
-├── package.json             # Script root monorepo
-└── pnpm-workspace.yaml
+|-- apps/
+|   |-- api/                 # Fastify API, Drizzle schema, migrations, tests
+|   `-- web/                 # React/Vite frontend and admin UI
+|-- docs/                    # Product, architecture, roadmap, and deployment notes
+|-- scripts/                 # Smoke tests, traffic tests, static server, visual checks
+|-- docker-compose.yml       # API container attached to external server networks
+|-- Dockerfile               # API image build
+|-- package.json             # Root monorepo scripts
+`-- pnpm-workspace.yaml
 ```
 
-## Prasyarat
+## Requirements
 
-- Node.js 20+ atau 22+
+- Node.js 20+ or 22+
 - PNPM 10+
-- PostgreSQL, jika menjalankan API lokal tanpa Docker
-- S3-compatible storage, jika ingin upload media lokal tanpa Docker
-- Docker dan Docker Compose, jika menjalankan aplikasi via container
+- PostgreSQL for local API development
+- S3-compatible storage for local media upload testing
+- Docker and Docker Compose for server deployment
 
-## Menjalankan Secara Lokal
+## Local Development
 
-1. Install dependency.
+1. Install dependencies.
 
 ```bash
 pnpm install
 ```
 
-2. Siapkan environment API.
+2. Prepare the API environment file.
 
 ```bash
 cp apps/api/.env.example apps/api/.env
 ```
 
-3. Edit `apps/api/.env` sesuai koneksi lokal.
+3. Edit `apps/api/.env` for your local services.
 
 ```env
-DATABASE_URL="postgresql://portfolio:portfolio@localhost:5432/portfolio"
+DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
 DATABASE_POOL_MAX=5
 PORT=3001
 LOG_LEVEL="info"
@@ -88,7 +86,7 @@ S3_FORCE_PATH_STYLE="true"
 S3_PUBLIC_URL="http://localhost:8333/portfolio"
 ```
 
-4. Jalankan migrasi dan seed data awal.
+4. Run migrations and seed initial content.
 
 ```bash
 pnpm db:generate
@@ -96,135 +94,169 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
-5. Jalankan web dan API.
+5. Start the web app and API.
 
 ```bash
 pnpm dev
 ```
 
-URL lokal:
+Local URLs:
 
-- Web publik: `http://localhost:5173`
+- Public web: `http://localhost:5173`
 - Admin: `http://localhost:5173/admin`
 - API: `http://localhost:3001`
 - Swagger UI: `http://localhost:3001/docs`
 - Health check: `http://localhost:3001/health`
 
-Jika API tidak berjalan di `http://localhost:3001`, set `VITE_API_URL` saat menjalankan atau membangun frontend.
+Set `VITE_API_URL` if the API does not run at `http://localhost:3001`.
 
-## Menjalankan Dengan Docker
+## Docker Deployment
 
-Docker Compose hanya menjalankan `api` dan `web`. PostgreSQL, SeaweedFS S3, dan Nginx diasumsikan sudah berjalan di server dan berada di Docker network eksternal yang sama.
+Docker Compose runs only the `api` service. PostgreSQL, SeaweedFS S3, and Nginx are expected to already exist on the server.
+
+The API container joins three external Docker networks:
+
+- `service_service_network`: service network for Nginx and SeaweedFS.
+- `database_database_network`: database network for PostgreSQL.
+- `project_network`: shared network for server projects.
+
+Prepare the server environment:
 
 ```bash
 cp .env.docker.example .env
-docker network create portfolio_net
+```
+
+Example production `.env`:
+
+```env
+PUBLIC_ORIGIN=https://your-domain.com
+
+SERVICE_NETWORK=service_service_network
+DATABASE_NETWORK=database_database_network
+PROJECT_NETWORK=project_network
+
+POSTGRES_HOST=postgres
+POSTGRES_DB=portfolio
+POSTGRES_USER=portfolio
+POSTGRES_PASSWORD=replace-with-server-password
+
+ADMIN_EMAIL=admin@your-domain.com
+ADMIN_PASSWORD=replace-with-a-strong-password
+ADMIN_TOKEN=replace-with-a-long-random-token
+
+S3_ENDPOINT=http://seaweedfs:8333
+S3_BUCKET=portfolio
+S3_ACCESS_KEY_ID=replace-with-s3-access-key
+S3_SECRET_ACCESS_KEY=replace-with-s3-secret-key
+```
+
+Start the API:
+
+```bash
 docker compose up --build -d
 ```
 
-URL Docker:
+Build the frontend static files:
 
-- Web publik: arahkan Nginx ke `portfolio-web:80`
-- Admin: `https://domain-anda/admin`
-- API: arahkan route `/api/` ke `portfolio-api:3001`
-- Swagger UI: arahkan route `/docs/` ke `portfolio-api:3001`
-- Health check: arahkan `/health` ke `portfolio-api:3001/health`
-- Storage publik: arahkan route `/s3/` ke `seaweedfs:8333`
-
-Saat container API start, command Docker akan menjalankan migrasi database, setup bucket storage, seed data awal, lalu start server.
-
-Untuk production domain, ubah `.env`:
-
-```env
-PUBLIC_ORIGIN=https://domain-anda.com
-DOCKER_NETWORK=portfolio_net
-POSTGRES_HOST=postgres
-ADMIN_EMAIL=admin@domain-anda.com
-ADMIN_PASSWORD=gunakan-password-kuat
-ADMIN_TOKEN=gunakan-token-random-panjang
+```bash
+pnpm --filter @portfolio/web build
 ```
 
-Jika nama service server berbeda, sesuaikan `POSTGRES_HOST`, `S3_ENDPOINT`, dan `DOCKER_NETWORK`. Peta route Nginx tersedia di `nginx/portofolio.json`.
+Nginx should serve `apps/web/dist` as the static root and proxy:
 
-## Script Penting
+- `/api/` to `http://portfolio-api:3001`
+- `/docs/` to `http://portfolio-api:3001`
+- `/health` to `http://portfolio-api:3001/health`
+- `/health/storage` to `http://portfolio-api:3001/health/storage`
+- `/sitemap.xml` to `http://portfolio-api:3001/sitemap.xml`
+- `/robots.txt` to `http://portfolio-api:3001/robots.txt`
+- `/s3/` to `http://seaweedfs:8333/`
 
-| Command              | Fungsi                                 |
-| -------------------- | -------------------------------------- |
-| `pnpm dev`           | Menjalankan web dan API secara paralel |
-| `pnpm build`         | Build semua workspace                  |
-| `pnpm check`         | Type check semua workspace             |
-| `pnpm test`          | Menjalankan test API                   |
-| `pnpm test:security` | Menjalankan security smoke test        |
-| `pnpm test:traffic`  | Menjalankan traffic test               |
-| `pnpm db:generate`   | Generate migration Drizzle             |
-| `pnpm db:migrate`    | Apply migration ke PostgreSQL          |
-| `pnpm db:seed`       | Seed profil, admin, dan konten awal    |
-| `pnpm db:studio`     | Membuka Drizzle Studio                 |
-| `pnpm storage:setup` | Membuat/mengecek bucket S3-compatible  |
+If the server uses different container names, update `POSTGRES_HOST` and `S3_ENDPOINT`. Nginx can reach the API as `portfolio-api` because Docker Compose assigns that alias on `service_service_network`.
+
+When the API container starts, it runs database migrations, checks or creates the storage bucket, seeds initial data, and then starts the server.
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `pnpm dev` | Run the web app and API in parallel |
+| `pnpm build` | Build all workspaces |
+| `pnpm check` | Type-check all workspaces |
+| `pnpm test` | Run API tests |
+| `pnpm test:security` | Run the security smoke test |
+| `pnpm test:traffic` | Run the traffic test |
+| `pnpm db:generate` | Generate Drizzle migrations |
+| `pnpm db:migrate` | Apply migrations to PostgreSQL |
+| `pnpm db:seed` | Seed profile, admin user, and initial content |
+| `pnpm db:studio` | Open Drizzle Studio |
+| `pnpm storage:setup` | Create or check the S3-compatible bucket |
 
 ## Environment Variables
 
 ### API
 
-| Variable               | Keterangan                                              |
-| ---------------------- | ------------------------------------------------------- |
-| `DATABASE_URL`         | URL koneksi PostgreSQL                                  |
-| `DATABASE_POOL_MAX`    | Maksimum koneksi pool database                          |
-| `PORT`                 | Port API, default `3001`                                |
-| `LOG_LEVEL`            | Level log Fastify                                       |
-| `TRUST_PROXY`          | Set `true` jika API di belakang reverse proxy tepercaya |
-| `API_BODY_LIMIT_BYTES` | Batas ukuran request body, default `6291456`            |
-| `CORS_ORIGIN`          | Origin frontend yang diizinkan                          |
-| `ADMIN_TOKEN`          | Secret legacy/fallback, minimal 16 karakter             |
-| `ADMIN_EMAIL`          | Email login admin                                       |
-| `ADMIN_PASSWORD`       | Password login admin; akan di-hash saat seed            |
-| `S3_ENDPOINT`          | Endpoint storage S3-compatible                          |
-| `S3_REGION`            | Region storage, default `auto`                          |
-| `S3_BUCKET`            | Nama bucket media                                       |
-| `S3_ACCESS_KEY_ID`     | Access key storage                                      |
-| `S3_SECRET_ACCESS_KEY` | Secret key storage                                      |
-| `S3_FORCE_PATH_STYLE`  | Umumnya `true` untuk SeaweedFS/MinIO                    |
-| `S3_PUBLIC_URL`        | URL publik untuk membaca media                          |
+| Variable | Description |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection URL |
+| `DATABASE_POOL_MAX` | Maximum database pool connections |
+| `PORT` | API port, defaults to `3001` |
+| `LOG_LEVEL` | Fastify log level |
+| `TRUST_PROXY` | Set to `true` when the API is behind a trusted reverse proxy |
+| `API_BODY_LIMIT_BYTES` | Request body size limit, defaults to `6291456` |
+| `CORS_ORIGIN` | Allowed frontend origin |
+| `ADMIN_TOKEN` | Legacy/fallback admin secret, minimum 16 characters |
+| `ADMIN_EMAIL` | Admin login email |
+| `ADMIN_PASSWORD` | Admin login password; hashed during seed |
+| `S3_ENDPOINT` | S3-compatible storage endpoint |
+| `S3_REGION` | Storage region, defaults to `auto` |
+| `S3_BUCKET` | Media bucket name |
+| `S3_ACCESS_KEY_ID` | Storage access key |
+| `S3_SECRET_ACCESS_KEY` | Storage secret key |
+| `S3_FORCE_PATH_STYLE` | Usually `true` for SeaweedFS or MinIO |
+| `S3_PUBLIC_URL` | Public URL for reading media |
 
 ### Web
 
-| Variable       | Keterangan                                                                                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_API_URL` | Base URL API. Default development: `http://localhost:3001`. Pada Docker build diset kosong agar request memakai origin yang sama melalui Nginx. |
+| Variable | Description |
+| --- | --- |
+| `VITE_API_URL` | API base URL. Development default: `http://localhost:3001`. Leave empty for same-origin production behind Nginx. |
 
 ### Docker Root `.env`
 
-| Variable               | Keterangan                                                        |
-| ---------------------- | ----------------------------------------------------------------- |
-| `PUBLIC_ORIGIN`        | Origin publik yang dipakai CORS, sitemap, dan URL media           |
-| `DOCKER_NETWORK`       | Nama Docker network eksternal yang dipakai bersama service server |
-| `POSTGRES_HOST`        | Hostname service PostgreSQL di network Docker                     |
-| `POSTGRES_DB`          | Nama database                                                     |
-| `POSTGRES_USER`        | User PostgreSQL                                                   |
-| `POSTGRES_PASSWORD`    | Password PostgreSQL                                               |
-| `ADMIN_EMAIL`          | Email admin seed                                                  |
-| `ADMIN_PASSWORD`       | Password admin seed                                               |
-| `ADMIN_TOKEN`          | Secret admin fallback                                             |
-| `S3_BUCKET`            | Bucket media                                                      |
-| `S3_ACCESS_KEY_ID`     | Access key SeaweedFS/S3                                           |
-| `S3_SECRET_ACCESS_KEY` | Secret key SeaweedFS/S3                                           |
-| `S3_ENDPOINT`          | Endpoint S3 internal, misalnya `http://seaweedfs:8333`            |
+| Variable | Description |
+| --- | --- |
+| `PUBLIC_ORIGIN` | Public origin used by CORS, sitemap, and media URLs |
+| `SERVICE_NETWORK` | External service network for Nginx and SeaweedFS |
+| `DATABASE_NETWORK` | External database network for PostgreSQL |
+| `PROJECT_NETWORK` | External shared project network |
+| `POSTGRES_HOST` | PostgreSQL hostname inside `DATABASE_NETWORK` |
+| `POSTGRES_DB` | Database name |
+| `POSTGRES_USER` | PostgreSQL user |
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `ADMIN_EMAIL` | Admin seed email |
+| `ADMIN_PASSWORD` | Admin seed password |
+| `ADMIN_TOKEN` | Fallback admin secret |
+| `S3_ENDPOINT` | Internal S3 endpoint, for example `http://seaweedfs:8333` |
+| `S3_BUCKET` | Media bucket |
+| `S3_ACCESS_KEY_ID` | SeaweedFS/S3 access key |
+| `S3_SECRET_ACCESS_KEY` | SeaweedFS/S3 secret key |
 
-## API dan Endpoint
+## API and Endpoints
 
-Dokumentasi interaktif tersedia di Swagger UI:
+Interactive API documentation is available in Swagger UI:
 
-- Local dev: `http://localhost:3001/docs`
-- Docker/Nginx: `http://localhost/docs`
+- Local development: `http://localhost:3001/docs`
+- Docker/Nginx: `https://your-domain.com/docs`
 
-Endpoint sistem:
+System endpoints:
 
 - `GET /health`
 - `GET /health/storage`
 - `GET /sitemap.xml`
 - `GET /robots.txt`
 
-Endpoint publik berada di prefix `/api`, termasuk:
+Public endpoints use the `/api` prefix, including:
 
 - `GET /api/site`
 - `GET /api/profile`
@@ -236,37 +268,37 @@ Endpoint publik berada di prefix `/api`, termasuk:
 - `GET /api/research`
 - `GET /api/contact-links`
 
-Endpoint admin berada di `/api/admin/*` dan membutuhkan login admin. Mutasi admin memakai session cookie `portfolio_admin` dan header `x-csrf-token`.
+Admin endpoints live under `/api/admin/*` and require admin login. Admin mutations use the `portfolio_admin` session cookie and the `x-csrf-token` header.
 
-## Model Data Utama
+## Data Model
 
-Database berisi tabel utama berikut:
+The database includes these main tables:
 
-- `Project`: data proyek, status publikasi, SEO, demo URL, GitHub URL, featured rank, dan ordering.
-- `Technology` dan `ProjectTechnology`: tag teknologi proyek.
-- `ProjectMedia`: galeri media per proyek.
-- `MediaAsset`: metadata file yang diupload ke object storage.
-- `SiteProfile`: konten profil utama, hero, about, footer, SEO, dan indexing.
-- `ProfileFact`: fakta singkat di bagian about/profile.
-- `ResearchItem`: publikasi, paper, sertifikasi, edukasi, atau credential.
-- `ContactLink`: link kontak yang tampil di halaman publik.
-- `AdminUser` dan `AdminSession`: akun admin dan session login.
-- `SitePreference`: pengaturan situs berbasis key-value.
+- `Project`: project data, publication status, SEO, demo URL, GitHub URL, featured rank, and ordering.
+- `Technology` and `ProjectTechnology`: project technology tags.
+- `ProjectMedia`: project gallery media.
+- `MediaAsset`: metadata for uploaded object-storage files.
+- `SiteProfile`: main profile content, hero, about, footer, SEO, and indexing.
+- `ProfileFact`: short facts shown in the profile/about section.
+- `ResearchItem`: publications, papers, certifications, education, or credentials.
+- `ContactLink`: public contact links.
+- `AdminUser` and `AdminSession`: admin users and login sessions.
+- `SitePreference`: key-value site settings.
 
-## Workflow Konten
+## Content Workflow
 
-1. Set `ADMIN_EMAIL` dan `ADMIN_PASSWORD`.
-2. Jalankan `pnpm db:seed`.
-3. Buka `/admin`.
-4. Login memakai email dan password admin.
-5. Kelola profil, facts, research, contact links, proyek, media, dan selected work.
-6. Pastikan proyek yang ingin tampil publik memiliki status `PUBLISHED`.
+1. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+2. Run `pnpm db:seed`.
+3. Open `/admin`.
+4. Log in with the admin email and password.
+5. Manage profile, facts, research, contact links, projects, media, and selected work.
+6. Ensure public projects use the `PUBLISHED` status.
 
-Untuk proyek yang belum punya demo publik, gunakan status demo `COMING_SOON`, `PRIVATE`, atau `ARCHIVED` agar klaim di portfolio tetap akurat.
+For projects without a public demo, use `COMING_SOON`, `PRIVATE`, or `ARCHIVED` so the portfolio stays accurate.
 
-## Testing dan Quality Check
+## Testing and Quality Checks
 
-Sebelum deploy, jalankan:
+Before deployment, run:
 
 ```bash
 pnpm check
@@ -274,40 +306,40 @@ pnpm test
 pnpm build
 ```
 
-Opsional untuk validasi tambahan:
+Optional extra checks:
 
 ```bash
 pnpm test:security
 pnpm test:traffic
 ```
 
-Checklist production detail tersedia di `docs/production-readiness.md`.
+The detailed production checklist is available in `docs/production-readiness.md`.
 
 ## Deployment Notes
 
-- Gunakan HTTPS di production.
-- Ganti semua secret default sebelum deploy.
-- Set `PUBLIC_ORIGIN` ke domain final.
-- Set `TRUST_PROXY=true` hanya saat API berada di belakang reverse proxy/load balancer tepercaya.
-- Sajikan media dari object storage/CDN melalui `S3_PUBLIC_URL`.
-- Frontend dapat dihosting sebagai static build dari `apps/web/dist`.
-- API Fastify lebih cocok dijalankan sebagai service long-running daripada serverless function jika upload media atau traffic meningkat.
-- Untuk Cloudflare Tunnel/Nginx yang berjalan di Docker network yang sama, arahkan ke `portfolio-web:80`, `portfolio-api:3001`, dan `seaweedfs:8333` sesuai `nginx/portofolio.json`.
+- Use HTTPS in production.
+- Replace all default secrets before deployment.
+- Set `PUBLIC_ORIGIN` to the final domain.
+- Set `TRUST_PROXY=true` only when the API is behind a trusted reverse proxy or load balancer.
+- Serve media from object storage or a CDN through `S3_PUBLIC_URL`.
+- Serve the frontend as a static build from `apps/web/dist`.
+- Fastify should run as a long-running service rather than a serverless function if uploads or traffic increase.
+- If Nginx runs in Docker, it must share `service_service_network` with `portfolio-api`.
 
-## Dokumentasi Tambahan
+## Additional Documentation
 
-- `docs/project-context.md`: konteks produk, audiens, dan prinsip konten.
-- `docs/architecture-design.md`: catatan arsitektur.
-- `docs/roadmap.md`: fase implementasi.
-- `docs/production-readiness.md`: checklist production.
-- `docs/security-traffic-test-report.md`: hasil security dan traffic test.
-- `docs/database-optimization.md`: catatan optimasi database.
+- `docs/project-context.md`: product context, audience, and content principles.
+- `docs/architecture-design.md`: architecture notes.
+- `docs/roadmap.md`: implementation phases.
+- `docs/production-readiness.md`: production checklist.
+- `docs/security-traffic-test-report.md`: security and traffic test results.
+- `docs/database-optimization.md`: database optimization notes.
 
-## Catatan Keamanan
+## Security Notes
 
-- Jangan commit file `.env`.
-- Gunakan password admin yang kuat dan token random panjang.
-- Admin route sudah memakai HttpOnly cookie dan CSRF token.
-- Upload media dibatasi untuk image yang tervalidasi.
-- Security headers dipasang di API.
-- Jika menjalankan multi-instance API, pindahkan counter rate limit login gagal dari memory ke PostgreSQL atau Redis.
+- Do not commit `.env` files.
+- Use a strong admin password and a long random token.
+- Admin routes use HttpOnly cookies and CSRF tokens.
+- Media uploads are limited to validated images.
+- Security headers are applied by the API.
+- If running multiple API instances, move the failed-login rate-limit counter from memory to PostgreSQL or Redis.
