@@ -2,7 +2,7 @@
 
 Portfolio pribadi Mohammad Fauzi Aziz yang menampilkan profil, selected work, riset/sertifikasi, kontak, halaman detail proyek, dan CMS admin untuk mengelola konten tanpa perlu mengubah kode.
 
-Proyek ini berbentuk PNPM monorepo dengan frontend React/Vite dan backend Fastify. Data disimpan di PostgreSQL melalui Drizzle ORM, sedangkan media disimpan di object storage S3-compatible. Untuk deployment production-style, repository ini menyediakan Docker Compose untuk API yang memakai PostgreSQL, SeaweedFS S3, dan Nginx eksternal di server.
+Proyek ini berbentuk PNPM monorepo dengan frontend React/Vite dan backend Fastify. Data disimpan di PostgreSQL melalui Drizzle ORM, sedangkan media disimpan di object storage S3-compatible. Untuk deployment production-style, repository ini menyediakan Docker Compose untuk container aplikasi yang memakai PostgreSQL, SeaweedFS S3, dan Nginx eksternal di server.
 
 ## Fitur Utama
 
@@ -13,7 +13,7 @@ Proyek ini berbentuk PNPM monorepo dengan frontend React/Vite dan backend Fastif
 - API Fastify dengan Swagger UI di `/docs`.
 - Upload media ke storage S3-compatible, termasuk metadata aset dan galeri proyek.
 - SEO dasar: sitemap, robots.txt, metadata proyek, canonical URL, dan kontrol indexing.
-- Docker Compose siap pakai untuk menjalankan API di network server.
+- Docker Compose siap pakai untuk menjalankan container aplikasi di network server.
 
 ## Tech Stack
 
@@ -33,9 +33,11 @@ Proyek ini berbentuk PNPM monorepo dengan frontend React/Vite dan backend Fastif
 │   ├── api/                 # Fastify API, Drizzle schema, migrations, tests
 │   └── web/                 # React/Vite frontend dan admin UI
 ├── docs/                    # Catatan produk, arsitektur, roadmap, deployment
+├── nginx/                   # Peta route untuk Nginx eksternal
 ├── scripts/                 # Smoke test, traffic test, static server, visual checks
-├── docker-compose.yml       # Container API di network eksternal
-├── Dockerfile               # Build image API
+├── seaweedfs/               # Konfigurasi S3 credentials untuk SeaweedFS
+├── docker-compose.yml       # Container API + web static di network eksternal
+├── Dockerfile               # Build image API dan web static
 ├── package.json             # Script root monorepo
 └── pnpm-workspace.yaml
 ```
@@ -112,21 +114,17 @@ Jika API tidak berjalan di `http://localhost:3001`, set `VITE_API_URL` saat menj
 
 ## Menjalankan Dengan Docker
 
-Docker Compose hanya menjalankan `api`. PostgreSQL, SeaweedFS S3, dan Nginx diasumsikan sudah berjalan di server. Project ini masuk ke tiga network eksternal server:
-
-- `service_service_network`: akses Nginx dan SeaweedFS.
-- `database_database_network`: akses PostgreSQL.
-- `project_network`: akses antar-project di server.
+Docker Compose hanya menjalankan `api` dan `web`. PostgreSQL, SeaweedFS S3, dan Nginx diasumsikan sudah berjalan di server dan berada di Docker network eksternal yang sama.
 
 ```bash
 cp .env.docker.example .env
+docker network create portfolio_net
 docker compose up --build -d
-pnpm --filter @portfolio/web build
 ```
 
 URL Docker:
 
-- Web publik: sajikan static root dari `apps/web/dist`
+- Web publik: arahkan Nginx ke `portfolio-web:80`
 - Admin: `https://domain-anda/admin`
 - API: arahkan route `/api/` ke `portfolio-api:3001`
 - Swagger UI: arahkan route `/docs/` ke `portfolio-api:3001`
@@ -139,82 +137,78 @@ Untuk production domain, ubah `.env`:
 
 ```env
 PUBLIC_ORIGIN=https://domain-anda.com
-SERVICE_NETWORK=service_service_network
-DATABASE_NETWORK=database_database_network
-PROJECT_NETWORK=project_network
+DOCKER_NETWORK=portfolio_net
 POSTGRES_HOST=postgres
 ADMIN_EMAIL=admin@domain-anda.com
 ADMIN_PASSWORD=gunakan-password-kuat
 ADMIN_TOKEN=gunakan-token-random-panjang
 ```
 
-Jika nama service/container server berbeda, sesuaikan `POSTGRES_HOST` dan `S3_ENDPOINT`. Nginx bisa mengakses API lewat hostname `portfolio-api` karena Compose memberi alias itu di `service_service_network`.
+Jika nama service server berbeda, sesuaikan `POSTGRES_HOST`, `S3_ENDPOINT`, dan `DOCKER_NETWORK`. Peta route Nginx tersedia di `nginx/portofolio.json`.
 
 ## Script Penting
 
-| Command | Fungsi |
-| --- | --- |
-| `pnpm dev` | Menjalankan web dan API secara paralel |
-| `pnpm build` | Build semua workspace |
-| `pnpm check` | Type check semua workspace |
-| `pnpm test` | Menjalankan test API |
-| `pnpm test:security` | Menjalankan security smoke test |
-| `pnpm test:traffic` | Menjalankan traffic test |
-| `pnpm db:generate` | Generate migration Drizzle |
-| `pnpm db:migrate` | Apply migration ke PostgreSQL |
-| `pnpm db:seed` | Seed profil, admin, dan konten awal |
-| `pnpm db:studio` | Membuka Drizzle Studio |
-| `pnpm storage:setup` | Membuat/mengecek bucket S3-compatible |
+| Command              | Fungsi                                 |
+| -------------------- | -------------------------------------- |
+| `pnpm dev`           | Menjalankan web dan API secara paralel |
+| `pnpm build`         | Build semua workspace                  |
+| `pnpm check`         | Type check semua workspace             |
+| `pnpm test`          | Menjalankan test API                   |
+| `pnpm test:security` | Menjalankan security smoke test        |
+| `pnpm test:traffic`  | Menjalankan traffic test               |
+| `pnpm db:generate`   | Generate migration Drizzle             |
+| `pnpm db:migrate`    | Apply migration ke PostgreSQL          |
+| `pnpm db:seed`       | Seed profil, admin, dan konten awal    |
+| `pnpm db:studio`     | Membuka Drizzle Studio                 |
+| `pnpm storage:setup` | Membuat/mengecek bucket S3-compatible  |
 
 ## Environment Variables
 
 ### API
 
-| Variable | Keterangan |
-| --- | --- |
-| `DATABASE_URL` | URL koneksi PostgreSQL |
-| `DATABASE_POOL_MAX` | Maksimum koneksi pool database |
-| `PORT` | Port API, default `3001` |
-| `LOG_LEVEL` | Level log Fastify |
-| `TRUST_PROXY` | Set `true` jika API di belakang reverse proxy tepercaya |
-| `API_BODY_LIMIT_BYTES` | Batas ukuran request body, default `6291456` |
-| `CORS_ORIGIN` | Origin frontend yang diizinkan |
-| `ADMIN_TOKEN` | Secret legacy/fallback, minimal 16 karakter |
-| `ADMIN_EMAIL` | Email login admin |
-| `ADMIN_PASSWORD` | Password login admin; akan di-hash saat seed |
-| `S3_ENDPOINT` | Endpoint storage S3-compatible |
-| `S3_REGION` | Region storage, default `auto` |
-| `S3_BUCKET` | Nama bucket media |
-| `S3_ACCESS_KEY_ID` | Access key storage |
-| `S3_SECRET_ACCESS_KEY` | Secret key storage |
-| `S3_FORCE_PATH_STYLE` | Umumnya `true` untuk SeaweedFS/MinIO |
-| `S3_PUBLIC_URL` | URL publik untuk membaca media |
+| Variable               | Keterangan                                              |
+| ---------------------- | ------------------------------------------------------- |
+| `DATABASE_URL`         | URL koneksi PostgreSQL                                  |
+| `DATABASE_POOL_MAX`    | Maksimum koneksi pool database                          |
+| `PORT`                 | Port API, default `3001`                                |
+| `LOG_LEVEL`            | Level log Fastify                                       |
+| `TRUST_PROXY`          | Set `true` jika API di belakang reverse proxy tepercaya |
+| `API_BODY_LIMIT_BYTES` | Batas ukuran request body, default `6291456`            |
+| `CORS_ORIGIN`          | Origin frontend yang diizinkan                          |
+| `ADMIN_TOKEN`          | Secret legacy/fallback, minimal 16 karakter             |
+| `ADMIN_EMAIL`          | Email login admin                                       |
+| `ADMIN_PASSWORD`       | Password login admin; akan di-hash saat seed            |
+| `S3_ENDPOINT`          | Endpoint storage S3-compatible                          |
+| `S3_REGION`            | Region storage, default `auto`                          |
+| `S3_BUCKET`            | Nama bucket media                                       |
+| `S3_ACCESS_KEY_ID`     | Access key storage                                      |
+| `S3_SECRET_ACCESS_KEY` | Secret key storage                                      |
+| `S3_FORCE_PATH_STYLE`  | Umumnya `true` untuk SeaweedFS/MinIO                    |
+| `S3_PUBLIC_URL`        | URL publik untuk membaca media                          |
 
 ### Web
 
-| Variable | Keterangan |
-| --- | --- |
-| `VITE_API_URL` | Base URL API. Default development: `http://localhost:3001`. Untuk production dengan Nginx satu origin, kosongkan saat build frontend. |
+| Variable       | Keterangan                                                                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_URL` | Base URL API. Default development: `http://localhost:3001`. Pada Docker build diset kosong agar request memakai origin yang sama melalui Nginx. |
 
 ### Docker Root `.env`
 
-| Variable | Keterangan |
-| --- | --- |
-| `PUBLIC_ORIGIN` | Origin publik yang dipakai CORS, sitemap, dan URL media |
-| `SERVICE_NETWORK` | Network service server untuk Nginx dan SeaweedFS |
-| `DATABASE_NETWORK` | Network database server untuk PostgreSQL |
-| `PROJECT_NETWORK` | Network antar-project di server |
-| `POSTGRES_HOST` | Hostname service PostgreSQL di network Docker |
-| `POSTGRES_DB` | Nama database |
-| `POSTGRES_USER` | User PostgreSQL |
-| `POSTGRES_PASSWORD` | Password PostgreSQL |
-| `ADMIN_EMAIL` | Email admin seed |
-| `ADMIN_PASSWORD` | Password admin seed |
-| `ADMIN_TOKEN` | Secret admin fallback |
-| `S3_BUCKET` | Bucket media |
-| `S3_ACCESS_KEY_ID` | Access key SeaweedFS/S3 |
-| `S3_SECRET_ACCESS_KEY` | Secret key SeaweedFS/S3 |
-| `S3_ENDPOINT` | Endpoint S3 internal, misalnya `http://seaweedfs:8333` |
+| Variable               | Keterangan                                                        |
+| ---------------------- | ----------------------------------------------------------------- |
+| `PUBLIC_ORIGIN`        | Origin publik yang dipakai CORS, sitemap, dan URL media           |
+| `DOCKER_NETWORK`       | Nama Docker network eksternal yang dipakai bersama service server |
+| `POSTGRES_HOST`        | Hostname service PostgreSQL di network Docker                     |
+| `POSTGRES_DB`          | Nama database                                                     |
+| `POSTGRES_USER`        | User PostgreSQL                                                   |
+| `POSTGRES_PASSWORD`    | Password PostgreSQL                                               |
+| `ADMIN_EMAIL`          | Email admin seed                                                  |
+| `ADMIN_PASSWORD`       | Password admin seed                                               |
+| `ADMIN_TOKEN`          | Secret admin fallback                                             |
+| `S3_BUCKET`            | Bucket media                                                      |
+| `S3_ACCESS_KEY_ID`     | Access key SeaweedFS/S3                                           |
+| `S3_SECRET_ACCESS_KEY` | Secret key SeaweedFS/S3                                           |
+| `S3_ENDPOINT`          | Endpoint S3 internal, misalnya `http://seaweedfs:8333`            |
 
 ## API dan Endpoint
 
@@ -298,7 +292,7 @@ Checklist production detail tersedia di `docs/production-readiness.md`.
 - Sajikan media dari object storage/CDN melalui `S3_PUBLIC_URL`.
 - Frontend dapat dihosting sebagai static build dari `apps/web/dist`.
 - API Fastify lebih cocok dijalankan sebagai service long-running daripada serverless function jika upload media atau traffic meningkat.
-- Untuk Cloudflare Tunnel/Nginx yang berjalan di Docker network yang sama, sajikan `apps/web/dist` sebagai static root, lalu proxy API ke `portfolio-api:3001` dan storage ke `seaweedfs:8333`.
+- Untuk Cloudflare Tunnel/Nginx yang berjalan di Docker network yang sama, arahkan ke `portfolio-web:80`, `portfolio-api:3001`, dan `seaweedfs:8333` sesuai `nginx/portofolio.json`.
 
 ## Dokumentasi Tambahan
 
