@@ -3,25 +3,42 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  Crop,
   LoaderCircle,
   Plus,
   Trash2,
 } from "lucide-react";
 import { Field } from "../components/Field";
+import { MediaCropDialog } from "../components/MediaCropDialog";
+import { MediaFeedback, type MediaFeedbackState } from "../components/MediaFeedback";
+import { ABOUT_PORTRAIT_ASPECT_RATIO, mediaFrameStyle, mediaImageStyle } from "../../../lib/media";
 import { SaveBadge } from "../components/SaveBadge";
 import { moveOrdered, withSave } from "../helpers";
-import { api } from "../../../lib/api";
-import type { ProfileFact } from "../../../types";
+import { api, fileToDataUrl } from "../../../lib/api";
+import type { MediaTransform, ProfileFact, SiteProfile } from "../../../types";
 import type { SaveState } from "../types";
-import { blankFact } from "../forms";
+import { blankFact, blankProfile } from "../forms";
 
 export function AboutFactsEditor() {
   const [facts, setFacts] = useState<ProfileFact[]>([]);
+  const [profile, setProfile] = useState<SiteProfile>(blankProfile);
+  const [portraitPreview, setPortraitPreview] = useState("");
+  const [portraitFile, setPortraitFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [uploadingPortrait, setUploadingPortrait] = useState(false);
+  const [mediaFeedback, setMediaFeedback] = useState<{ state: MediaFeedbackState; message: string }>({ state: "idle", message: "" });
   const [draft, setDraft] = useState(blankFact);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
-  const load = async () => setFacts(await api.adminProfileFacts());
+  const load = async () => {
+    const [nextProfile, nextFacts] = await Promise.all([
+      api.adminProfile(),
+      api.adminProfileFacts(),
+    ]);
+    setProfile(nextProfile);
+    setFacts(nextFacts);
+  };
   useEffect(() => {
     load().finally(() => setLoading(false));
   }, []);
@@ -30,6 +47,85 @@ export function AboutFactsEditor() {
     setFacts((current) =>
       current.map((fact) => (fact.id === id ? { ...fact, ...patch } : fact)),
     );
+  }
+
+  function updateProfile<K extends keyof SiteProfile>(key: K, value: SiteProfile[K]) {
+    setProfile((current) => ({ ...current, [key]: value }));
+  }
+
+  const portraitTransform: MediaTransform = {
+    cropZoom: profile.portraitCropZoom,
+    focalX: profile.portraitFocalX,
+    focalY: profile.portraitFocalY,
+    aspectRatio: ABOUT_PORTRAIT_ASPECT_RATIO,
+    displayWidth: null,
+    displayHeight: null,
+  };
+
+  async function selectPortrait(file?: File) {
+    if (!file) return;
+    setMediaFeedback({ state: "idle", message: "" });
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setPortraitPreview(dataUrl);
+      setPortraitFile(file);
+      setCropOpen(true);
+    } catch (error) {
+      setMediaFeedback({
+        state: "error",
+        message: error instanceof Error ? error.message : "Portrait preview failed.",
+      });
+    }
+  }
+
+  async function applyPortraitCrop(transform: MediaTransform) {
+    setUploadingPortrait(true);
+    setMediaFeedback({
+      state: "uploading",
+      message: portraitFile ? "Uploading portrait..." : "Applying portrait crop...",
+    });
+    try {
+      const asset = portraitFile ? await api.uploadMedia({
+        fileName: portraitFile.name,
+        mimeType: portraitFile.type,
+        dataBase64: portraitPreview.split(",")[1] ?? "",
+        scope: "profile",
+      }) : null;
+      setProfile((current) => ({
+        ...current,
+        portraitImageUrl: asset?.publicUrl ?? current.portraitImageUrl,
+        portraitImageAlt: current.portraitImageAlt || portraitFile?.name || null,
+        portraitCropZoom: transform.cropZoom,
+        portraitFocalX: transform.focalX,
+        portraitFocalY: transform.focalY,
+        portraitAspectRatio: transform.aspectRatio,
+        portraitDisplayWidth: transform.displayWidth,
+        portraitDisplayHeight: transform.displayHeight,
+      }));
+      setPortraitFile(null);
+      setCropOpen(false);
+      setMediaFeedback({
+        state: "success",
+        message: asset
+          ? "Portrait uploaded successfully. Save About to publish the change."
+          : "Portrait crop applied. Save About to publish the change.",
+      });
+    } catch (error) {
+      setMediaFeedback({
+        state: "error",
+        message: error instanceof Error ? `Portrait upload failed: ${error.message}` : "Portrait upload failed.",
+      });
+    } finally {
+      setUploadingPortrait(false);
+    }
+  }
+
+  async function saveProfile(event: React.FormEvent) {
+    event.preventDefault();
+    await withSave(setSaveState, async () => {
+      setProfile(await api.saveProfile(profile));
+      setPortraitPreview("");
+    });
   }
 
   async function saveFact(fact: ProfileFact) {
@@ -77,12 +173,78 @@ export function AboutFactsEditor() {
       <div className="cms-page-head">
         <div>
           <p className="cms-kicker">About</p>
-          <h1>Profile Facts</h1>
+          <h1>About & Footer</h1>
         </div>
         <div className="cms-actions">
           <SaveBadge state={saveState} />
         </div>
       </div>
+      <form className="cms-card cms-panel" onSubmit={saveProfile}>
+        <div className="cms-section-title">
+          <h2>About content</h2>
+          <span>Public homepage and footer</span>
+        </div>
+        <div className="cms-form-grid">
+          <Field label="About headline" wide>
+            <input value={profile.aboutHeadline} onChange={(event) => updateProfile("aboutHeadline", event.target.value)} required />
+          </Field>
+          <Field label="About body" wide>
+            <textarea rows={5} value={profile.aboutBody} onChange={(event) => updateProfile("aboutBody", event.target.value)} required />
+          </Field>
+          <Field label="Portrait image" wide>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={uploadingPortrait}
+              onChange={(event) => {
+                selectPortrait(event.target.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+            />
+            {(portraitPreview || profile.portraitImageUrl) && (
+              <div
+                className="cms-media-edit cms-portrait-edit"
+                role="button"
+                tabIndex={0}
+                aria-label="Adjust portrait crop"
+                onClick={() => setCropOpen(true)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") setCropOpen(true);
+                }}
+              >
+                <div className="cms-media-frame cms-portrait-preview" style={mediaFrameStyle(portraitTransform)}>
+                  <img src={portraitPreview || profile.portraitImageUrl || ""} alt="Portrait preview" style={mediaImageStyle(portraitTransform)} />
+                </div>
+                <span className="cms-media-edit-indicator" aria-hidden="true"><Crop size={17} /></span>
+              </div>
+            )}
+            <MediaFeedback state={mediaFeedback.state} message={mediaFeedback.message} />
+          </Field>
+          <Field label="Portrait alt">
+            <input value={profile.portraitImageAlt ?? ""} onChange={(event) => updateProfile("portraitImageAlt", event.target.value || null)} />
+          </Field>
+          <Field label="Short name / brand">
+            <input value={profile.shortName} onChange={(event) => updateProfile("shortName", event.target.value)} required />
+          </Field>
+          <Field label="Footer location">
+            <input value={profile.footerLocation} onChange={(event) => updateProfile("footerLocation", event.target.value)} required />
+          </Field>
+          <Field label="Footer timezone">
+            <input value={profile.footerTimezone} onChange={(event) => updateProfile("footerTimezone", event.target.value)} required />
+          </Field>
+          <Field label="Content language">
+            <select value={profile.contentLanguage} onChange={(event) => updateProfile("contentLanguage", event.target.value as SiteProfile["contentLanguage"])}>
+              <option value="en">English</option>
+              <option value="id">Indonesian</option>
+            </select>
+          </Field>
+          <div className="cms-actions wide">
+            <button className="cms-button primary" disabled={uploadingPortrait}>
+              <Check size={16} /> Save about
+            </button>
+          </div>
+        </div>
+      </form>
       <form className="cms-card cms-panel" onSubmit={addFact}>
         <div className="cms-section-title">
           <h2>Add fact</h2>
@@ -203,6 +365,23 @@ export function AboutFactsEditor() {
           {!facts.length && <p className="cms-muted">No profile facts yet.</p>}
         </div>
       </section>
+      <MediaCropDialog
+        open={cropOpen}
+        src={portraitPreview || profile.portraitImageUrl || ""}
+        value={portraitTransform}
+        title="Crop portrait"
+        busy={uploadingPortrait}
+        layoutAspectRatio={ABOUT_PORTRAIT_ASPECT_RATIO}
+        errorMessage={mediaFeedback.state === "error" ? mediaFeedback.message : undefined}
+        onCancel={() => {
+          if (portraitFile) {
+            setPortraitFile(null);
+            setPortraitPreview("");
+          }
+          setCropOpen(false);
+        }}
+        onApply={applyPortraitCrop}
+      />
     </div>
   );
 }

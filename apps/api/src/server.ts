@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import { config } from "./config.js";
 import { db, pool } from "./db/index.js";
 import { installErrorHandling } from "./lib/observability.js";
+import { corsOptions } from "./lib/cors.js";
 import { installSecurityHeaders } from "./lib/security.js";
 import { robotsTxt, sitemapXml } from "./lib/sitemap.js";
 import { projectRoutes } from "./modules/projects/routes.js";
@@ -17,7 +18,7 @@ export function buildServer() {
     trustProxy: config.TRUST_PROXY,
   });
   app.decorate("db", db);
-  app.register(cors, { origin: config.CORS_ORIGIN, credentials: true });
+  app.register(cors, corsOptions(config.CORS_ORIGIN));
   installSecurityHeaders(app);
   installErrorHandling(app);
   app.register(swagger, {

@@ -9,10 +9,21 @@
 
 - The Projects editor uses persistent file uploads only; administrators do not enter image URLs for cover, highlight, hover preview, or gallery media.
 - One file selection may contain multiple JPEG, PNG, or WebP images. Each item shows queued, uploading, ready, or failed feedback before it becomes a persisted `ProjectMedia` row.
+- Every upload and media save reports an accessible loading, success, or failure state in context. Batch uploads summarize successful and failed counts while failed rows retain the server error for retry.
 - Uploaded gallery assets can be assigned as cover, highlight, or homepage hover preview media. Permanent public URLs remain storage-derived implementation details.
-- `Save draft` persists `Project.status = DRAFT` and permits incomplete content after title and unique slug are provided. `Save` applies full publication validation when status is `PUBLISHED`.
+- Uploaded images must preview before save in a reusable modal crop editor. Positioning uses direct drag inside the crop frame, zoom uses a slider, and aspect ratio plus rendered width/height remain editable; persist usage-specific crop/transform/size metadata when the current schema cannot derive it from the stored asset.
+- Every CMS feature that uploads media follows the same rule, including project media, profile/about portrait, SEO/OG images, and any future upload field. Original files stay unchanged; each usage stores its own display size and transform settings.
+- The About portrait is layout-bound: its crop preview automatically uses the public About frame and exposes only direct positioning plus zoom, without aspect-ratio or width/height choices.
+- `Draft` persists `Project.status = DRAFT` and permits incomplete content after title and unique slug are provided. `Save` applies full publication validation when status is `PUBLISHED`.
 - CMS preview uses current form and gallery state through the same renderer as the public project detail page. Its back action returns to the CMS editor and draft content remains excluded from public queries.
-- Existing `Project`, `MediaAsset`, and `ProjectMedia` tables cover this workflow; no additional table is required.
+- Existing `Project`, `MediaAsset`, and `ProjectMedia` tables cover persistent project uploads. Add a migration only if usage-specific crop/transform/size metadata cannot fit the chosen implementation.
+
+## Current Dashboard And Navigation Addendum
+
+- The Dashboard must surface website visitors, performance, organic traffic, and backlinks as first-class metric groups.
+- Dashboard values must come from connected analytics/performance/SEO/backlink providers or a database snapshot populated by those providers. If no provider or snapshot exists, show `Analytics not connected` or `Unavailable` instead of fake production numbers.
+- The current schema does not define dedicated analytics, performance, organic traffic, or backlink tables. Add narrowly scoped snapshot tables only when provider APIs are not queried live.
+- `Profile & Homepage` owns hero/profile-homepage copy only. The `About` CMS menu owns About content and footer fields together.
 
 ## Cleaned Request
 
@@ -25,7 +36,7 @@ The managed content should include:
 - Project archive and detail pages: project title, slug, category, role, team/organization note, summary, challenge, contribution, solution, dates, technologies, status, live demo URL, GitHub URL, cover image, gallery images, and highlighted media.
 - About section: portrait/photo, name, headline, biography, university, degree, location, languages, and any extra profile fields.
 - Research and credentials section: publications, research papers, certifications, issuers/venues, dates, URLs, and display order.
-- Contact section: email, phone, LinkedIn, GitHub, other contact links, CTA text, and footer identity/location data.
+- Contact section: email, phone, LinkedIn, GitHub, other contact links, and CTA text.
 
 The CMS should support adding and removing repeatable content such as projects, project images, technologies, about facts, languages, research entries, certifications, and contact links.
 
@@ -59,10 +70,11 @@ Content and behavior that must be editable from the CMS:
 
 Content that must be editable from the CMS:
 
-- About/profile photo.
+- About/profile photo through persistent upload.
 - About headline, currently `I turn complex workflows into dependable, maintainable products`.
 - About body text, currently describing business logic, database operations, authentication, RBAC, validation, testing, and frontend-backend integration.
 - About facts, where both field label and value can be edited.
+- Footer short name, location, timezone, and related footer identity fields.
 
 Current about facts that should be migrated into CMS:
 
@@ -127,21 +139,19 @@ Keep the CMS small and practical:
 
 - Replace the existing token-only admin access with a simple CMS login.
 - Use one admin role only: `ADMIN`.
-- Store image fields as URLs first.
+- Use persistent uploads for project media and profile/about images.
 - Use reorder fields with simple numeric `sortOrder` / `featuredRank`.
 - Build CRUD screens inside the existing `/admin` page instead of adding a separate admin app.
 - Add database-backed content APIs for public website rendering.
 - Add baseline SEO, performance, and security improvements while the content moves into the CMS.
 
-No managed file uploads in Version 1. Use external image URLs or existing hosted image URLs. Add uploads later only if URL-based image management becomes painful.
+Managed file uploads are now part of the migration scope for project media and profile/about images. URL-only image management is historical context, not the active target.
 
 ### Version 2
 
 Add only after Version 1 works:
 
-- Managed image upload/storage.
 - Rich text editor.
-- Draft preview mode.
 - Activity log/version history.
 
 ## Recommended Data Model
@@ -415,8 +425,8 @@ Protect CMS access and public rendering:
 
 Refactor `/admin` into simple tabs:
 
-- `Profile`: hero, about text, portrait URL, footer identity.
-- `About Facts`: university, degree, location, languages, extra facts.
+- `Profile & Homepage`: hero/homepage copy and CTA fields.
+- `About`: about text, portrait upload, about facts, and footer identity.
 - `Projects`: existing project CRUD, extended with overview, highlight image, cover image, demo URL, GitHub URL, and gallery media.
 - `Research`: publications, papers, certifications.
 - `Contact`: email, phone, LinkedIn, GitHub, extra links.
@@ -438,7 +448,7 @@ Replace hardcoded content in `Home.tsx` with API-backed data:
 - About reads `SiteProfile` + `ProfileFact`.
 - Research reads visible `ResearchItem` entries grouped by type.
 - Contact reads visible `ContactLink`.
-- Footer reads `SiteProfile`.
+- Footer reads `SiteProfile`, but footer fields are edited from the CMS About menu.
 
 Replace `galleryByProject` in `ProjectDetail.tsx` with `ProjectMedia`.
 
@@ -478,6 +488,6 @@ Keep existing fallback behavior for projects. Add a small fallback for site cont
 
 ## Deliberate Simplifications
 
-- Image upload is skipped for Version 1. URL fields are enough to make every requested image configurable.
+- URL-only image fields are skipped for the current CMS migration where persistent upload is required.
 - CMS auth uses one admin role only. Multi-role permissions are skipped until there is a real need.
 - No rich text editor yet. Plain text fields match the current website content and reduce implementation risk.

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { and, asc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -22,6 +22,21 @@ export async function mediaRoutes(app: FastifyInstance) {
   const serializeProjectMedia = (row: Awaited<ReturnType<typeof listProjectMedia>>[number]) => ({
     ...row,
     url: row.mediaAsset ? publicMediaUrl(config.S3_PUBLIC_URL, row.mediaAsset.storageKey) : row.url
+  });
+
+  app.get("/media/*", async (request, reply) => {
+    const key = z.object({ "*": z.string().min(1) }).parse(request.params)["*"];
+    if (key.split("/").includes("..")) return reply.code(400).send({ message: "Invalid media key" });
+    try {
+      const object = await storage.send(new GetObjectCommand({ Bucket: config.S3_BUCKET, Key: key }));
+      if (object.ContentType) reply.type(object.ContentType);
+      reply.header("cache-control", "public, max-age=31536000, immutable");
+      return reply.send(object.Body);
+    } catch (error) {
+      const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+      if (status === 404) return reply.code(404).send({ message: "Media not found" });
+      throw error;
+    }
   });
 
   app.get("/projects/:slug/media", { schema: mediaSchemas.projectMedia }, async (request, reply) => {
@@ -76,7 +91,7 @@ export async function mediaRoutes(app: FastifyInstance) {
   app.post("/admin/projects/:id/media", { schema: mediaSchemas.createProjectMedia }, async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const data = projectMediaInput.parse(request.body);
-    const row = { id: randomUUID(), projectId: id, ...data, mediaAssetId: data.mediaAssetId ?? null, url: data.url ?? null, caption: data.caption ?? null, updatedAt: new Date() };
+    const row = { id: randomUUID(), projectId: id, ...data, mediaAssetId: data.mediaAssetId ?? null, url: data.url ?? null, caption: data.caption ?? null, displayWidth: data.displayWidth ?? null, displayHeight: data.displayHeight ?? null, updatedAt: new Date() };
     await app.db.insert(projectMedia).values(row);
     return reply.code(201).send(row);
   });
@@ -84,7 +99,7 @@ export async function mediaRoutes(app: FastifyInstance) {
   app.put("/admin/projects/:id/media/:mediaId", { schema: mediaSchemas.updateProjectMedia }, async (request, reply) => {
     const ids = z.object({ id: z.string(), mediaId: z.string() }).parse(request.params);
     const data = projectMediaInput.parse(request.body);
-    const [row] = await app.db.update(projectMedia).set({ ...data, mediaAssetId: data.mediaAssetId ?? null, url: data.url ?? null, caption: data.caption ?? null, updatedAt: new Date() }).where(and(eq(projectMedia.id, ids.mediaId), eq(projectMedia.projectId, ids.id))).returning();
+    const [row] = await app.db.update(projectMedia).set({ ...data, mediaAssetId: data.mediaAssetId ?? null, url: data.url ?? null, caption: data.caption ?? null, displayWidth: data.displayWidth ?? null, displayHeight: data.displayHeight ?? null, updatedAt: new Date() }).where(and(eq(projectMedia.id, ids.mediaId), eq(projectMedia.projectId, ids.id))).returning();
     return row ?? reply.code(404).send({ message: "Project media not found" });
   });
 

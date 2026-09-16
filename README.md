@@ -83,7 +83,7 @@ S3_BUCKET="portfolio"
 S3_ACCESS_KEY_ID="replace-with-s3-access-key"
 S3_SECRET_ACCESS_KEY="replace-with-s3-secret-key"
 S3_FORCE_PATH_STYLE="true"
-S3_PUBLIC_URL="http://localhost:8888/buckets/portfolio"
+S3_PUBLIC_URL="http://localhost:3001/api/media"
 ```
 
 4. Run migrations and seed initial content.

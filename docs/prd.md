@@ -1,7 +1,7 @@
 # PRD - Interactive Portfolio and Portfolio CMS
 
 Status: migration-ready  
-Last aligned: 2026-09-10  
+Last aligned: 2026-09-16
 CMS design source: `D:\Projek\design_website\CMS Admin Dashboard Design`
 
 ## 1. Product summary
@@ -61,7 +61,7 @@ The existing public portfolio remains the source of truth for public layout and 
 ### CMS route and navigation
 
 - `/admin`: login when signed out; CMS shell when authenticated.
-- CMS sidebar: Dashboard, Profile & Homepage, Selected Work, Projects, About, Research & Credentials, Contact, SEO, and Settings.
+- CMS sidebar: Dashboard, Profile & Homepage, Selected Work, Projects, About, Research & Credentials, Contact, SEO, and Settings. About owns the about copy, portrait, facts, and footer content so profile/homepage editing stays focused on hero content.
 - CMS header: breadcrumb/current section, site status, dark/light theme toggle, View site link, admin identity, and sign out.
 - Desktop uses a fixed sidebar and two-column forms where useful. Tablet may collapse the sidebar. Mobile uses a compact menu and single-column content while keeping primary save actions reachable.
 
@@ -107,11 +107,15 @@ The existing public portfolio remains the source of truth for public layout and 
 - Unsaved changes trigger a simple navigation/browser warning.
 - Icon-only buttons have accessible names, focus is visible, and information is never conveyed by color alone.
 - A successful save refreshes authoritative server data; optimistic UI must roll back or explain failures.
+- Every CMS feature that uploads media must provide adjustable output sizing before save. Use a conventional modal crop editor: admins drag the image directly inside the crop frame, use a slider for zoom, select an aspect ratio, and optionally set rendered width/height for each media usage. Do not expose focal-point positioning as a row of adjustment buttons.
+- The About portrait crop follows the public About layout automatically. Its editor exposes only direct positioning and zoom; aspect-ratio and rendered-size choices must not override the responsive layout frame.
+- Media size settings are usage-specific. The original upload stays unchanged, while public rendering and CMS previews use the saved transform/size metadata for the field where the media is used.
 
 ### 8.3 Dashboard
 
 - Provide date ranges of 7, 30, and 90 days and a visitors/page-views toggle.
 - Overview metrics: total visitors, page views, unique visitors, average session duration, bounce rate, top project, organic traffic, backlink traffic, performance score, and SEO score.
+- The first dashboard view must make four metric groups immediately scannable: website visitors, performance, organic traffic, and backlinks.
 - Detail sections: traffic over time, top pages, SEO traffic/keywords, device breakdown, referrer sources, backlink traffic/domains, Core Web Vitals, accessibility score, and SEO health checks.
 - SEO health includes sitemap, robots, meta-description coverage, alt-text coverage, canonical URLs, and bundle-size/image status.
 - Until an analytics provider is connected, the page must show an explicit `Placeholder data` or `Analytics not connected` state. Simulated values cannot be presented as production data.
@@ -119,8 +123,8 @@ The existing public portfolio remains the source of truth for public layout and 
 
 ### 8.4 Profile & Homepage
 
-- Edit display name, role/eyebrow, hero headline, supporting description, primary CTA label/URL, GitHub CTA label/URL, footer short name, location, and timezone.
-- Provide a compact live preview of hero copy, CTA labels, and footer identity.
+- Edit display name, role/eyebrow, hero headline, supporting description, primary CTA label/URL, and GitHub CTA label/URL.
+- Provide a compact live preview of hero copy and CTA labels.
 - CTA targets accept safe site-relative anchors/routes or validated HTTP(S) URLs as appropriate.
 
 ### 8.5 Selected Work
@@ -136,7 +140,7 @@ The existing public portfolio remains the source of truth for public layout and 
 
 - Project list shows title, category, publication status, demo status, and current selection/featured order. Empty and no-selection states provide an Add project action.
 - Create, edit, save, preview, change publication status, archive, and delete projects.
-- Provide separate `Save draft` and `Save` actions. `Save draft` always persists `DRAFT`; publication validation applies when saving as `PUBLISHED`.
+- Provide separate `Draft` and `Save` actions. `Draft` always persists `DRAFT`; publication validation applies when saving as `PUBLISHED`.
 - Group the editor into Info, Content, Media, and SEO & Links.
 
 Required project fields and behavior:
@@ -151,7 +155,9 @@ Required project fields and behavior:
 - Required before publication: title, slug, category, role, summary, overview, challenge, contribution, solution, valid date range, and at least one technology. Drafts require only a title and unique slug, and may otherwise be incomplete.
 - Slugs are normalized and unique. Changing a published slug requires a redirect strategy or an explicit warning.
 - Project media uses persistent upload rather than manually entered image URLs. Gallery items support multiple file selection, alt text, optional caption, ordering, cover/highlight/hover selection, replacement, and deletion.
-- Uploaded files show queued, uploading, ready, or failed preview states and are validated for allowed image type, size, and dimensions before storage. Local preview data is never persisted.
+- Uploaded files show queued, uploading, ready, or failed preview states and are validated for allowed image type, size, and dimensions before storage. Images must preview before save using local object URLs or equivalent temporary data that is never persisted.
+- Every media upload and media-metadata save shows an accessible in-context result. Loading, successful save, failed save, and mixed multi-file results use distinct icons/colors and a concise message; failures remain visible with their reason and a retry path.
+- Uploaded images open in the reusable crop modal before save and can be repositioned by dragging directly in the preview. The saved media keeps enough crop, focal point, aspect ratio, and rendered-size metadata to reproduce the same result in public and CMS previews without overwriting the original upload.
 - Publication and demo status are independent. Non-live demo states render disabled public actions even if a demo URL exists.
 
 ### 8.7 Project preview
@@ -165,7 +171,8 @@ Required project fields and behavior:
 
 ### 8.8 About
 
-- Edit portrait by URL or persistent upload, about headline, and biography.
+- Edit portrait by persistent upload, about headline, biography, footer short name, footer location, and footer timezone.
+- The CMS About menu contains both the public About section fields and footer fields; footer editing must not live under Profile & Homepage.
 - Manage repeatable facts with editable label/value, ordering, visibility, add, and delete.
 - Initial verified facts: University, Degree, Location, and Languages. Seed data must come from project context/CV, not Figma sample claims.
 
@@ -206,13 +213,15 @@ Required project fields and behavior:
 | --- | --- |
 | `AdminUser` | id, email, passwordHash, role=`ADMIN`, createdAt, updatedAt |
 | `AdminSession` | id, adminUserId, tokenHash, expiresAt, createdAt |
-| `SiteProfile` | identity, hero copy/CTAs, about copy/portrait, footer fields, global SEO, locale, timestamps |
+| `SiteProfile` | identity, hero copy/CTAs, about copy/portrait, optional portrait media asset/crop/size metadata, footer fields, global SEO, locale, timestamps |
 | `ProfileFact` | label, value, sortOrder, isVisible |
 | `ContactLink` | label, value, url, kind, sortOrder, isPrimary, isVisible |
 | `ResearchItem` | type, title, issuerOrVenue, dateLabel, doi, url, sortOrder, isVisible |
 | `Project` | current project fields plus overview, highlight/hover media, sort fields, SEO fields, canonical URL, isIndexed, timestamps |
-| `ProjectMedia` | projectId, media asset, legacy URL fallback, altText, caption, kind, sortOrder, isHighlighted |
-| `MediaAsset` | storage key/url, original name, MIME type, byte size, dimensions, timestamps; required only for persistent uploads |
+| `ProjectMedia` | projectId, media asset, legacy URL fallback, altText, caption, kind, sortOrder, isHighlighted, crop/focal/aspect/size metadata when edited |
+| `MediaAsset` | storage key/url, original name, MIME type, byte size, original dimensions, timestamps; required for persistent uploads |
+| `DashboardMetricSnapshot` | optional table or provider cache for visitors, page views, organic traffic, backlink traffic, performance, SEO, source, range, capturedAt |
+| `DashboardBacklinkSnapshot` | optional table or provider cache for backlink domain, target URL, source URL, authority/quality signal, firstSeen, lastSeen, capturedAt |
 | `SitePreference` | narrowly scoped persisted site/admin settings; no arbitrary command or secret values |
 
 Data constraints:
@@ -221,6 +230,7 @@ Data constraints:
 - Ordering fields are deterministic and indexed where used by public queries.
 - Deleting a project removes its project-media relationships safely; deleting an uploaded asset checks references first.
 - Secrets, session tokens, provider credentials, and deployment keys are never returned by content APIs.
+- Current schema already includes `Project`, `MediaAsset`, and `ProjectMedia` for persistent project uploads. Add a migration only for missing dashboard snapshots or usage-specific media transform/size metadata if the chosen implementation cannot derive them from existing tables/provider APIs.
 
 ## 10. API requirements
 
@@ -238,7 +248,7 @@ Data constraints:
 - Login, logout, current-session, and password-change endpoints.
 - Authenticated CRUD/reorder endpoints for site profile, selected work, projects, project media, profile facts, research items, contact links, and SEO/settings.
 - Authenticated media upload/delete endpoints when persistent upload support is enabled.
-- Dashboard summary endpoint that reports provider connection/availability and never substitutes simulated numbers for missing data.
+- Dashboard summary endpoint that reports visitor counts, performance, organic traffic, backlink metrics, provider connection/availability, and never substitutes simulated numbers for missing data.
 - Request and response validation is server-side. Admin mutations use consistent error shapes and appropriate HTTP status codes.
 
 ## 11. Visual and responsive requirements
@@ -298,8 +308,8 @@ The migration is an integration into the existing monorepo, not a second standal
 
 ### Phase 4 - Persistent media
 
-- Keep URL entry and add persistent object-storage upload behind one media field contract.
-- Replace all prototype `blob:` behavior with upload progress, validation, stored URLs, replacement, and safe deletion.
+- Use persistent object-storage upload behind one media field contract.
+- Replace all prototype `blob:` behavior with upload progress, validation, pre-save preview, stored URLs, replacement, usage-specific crop/focal/aspect/size metadata, and safe deletion.
 
 ### Phase 5 - Dashboard and operational settings
 

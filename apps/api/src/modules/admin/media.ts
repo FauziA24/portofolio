@@ -17,6 +17,25 @@ export function publicMediaUrl(baseUrl: string, storageKey: string) {
   return `${baseUrl.replace(/\/+$/, "")}/${storageKey.split("/").map(encodeURIComponent).join("/")}`;
 }
 
+export function normalizeStoredMediaUrl(
+  value: string | null | undefined,
+  publicBaseUrl: string,
+  storageEndpoint: string,
+  bucket: string,
+) {
+  if (!value) return value ?? null;
+  try {
+    const current = new URL(value);
+    const endpoint = new URL(storageEndpoint);
+    const bucketPath = `${endpoint.pathname.replace(/\/+$/, "")}/${bucket}/`;
+    if (current.origin !== endpoint.origin || !current.pathname.startsWith(bucketPath)) return value;
+    const storageKey = decodeURIComponent(current.pathname.slice(bucketPath.length));
+    return storageKey ? publicMediaUrl(publicBaseUrl, storageKey) : value;
+  } catch {
+    return value;
+  }
+}
+
 export function imageDimensions(buffer: Buffer, mimeType: string) {
   if (mimeType === "image/png" && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
     return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };

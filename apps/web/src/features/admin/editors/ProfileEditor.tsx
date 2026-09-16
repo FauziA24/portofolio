@@ -3,7 +3,7 @@ import { Check, LoaderCircle } from "lucide-react";
 import { Field } from "../components/Field";
 import { SaveBadge } from "../components/SaveBadge";
 import { withSave } from "../helpers";
-import { api, fileToBase64 } from "../../../lib/api";
+import { api } from "../../../lib/api";
 import type { SiteProfile } from "../../../types";
 import type { SaveState } from "../types";
 import { blankProfile } from "../forms";
@@ -11,7 +11,6 @@ import { blankProfile } from "../forms";
 export function ProfileEditor() {
   const [profile, setProfile] = useState<SiteProfile>(blankProfile);
   const [loading, setLoading] = useState(true);
-  const [uploadingPortrait, setUploadingPortrait] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
   useEffect(() => {
@@ -23,23 +22,6 @@ export function ProfileEditor() {
 
   function update<K extends keyof SiteProfile>(key: K, value: SiteProfile[K]) {
     setProfile((current) => ({ ...current, [key]: value }));
-  }
-
-  async function uploadPortrait(file?: File) {
-    if (!file) return;
-    setUploadingPortrait(true);
-    try {
-      const asset = await api.uploadMedia({
-        fileName: file.name,
-        mimeType: file.type,
-        dataBase64: await fileToBase64(file),
-        scope: "profile",
-      });
-      update("portraitImageUrl", asset.publicUrl);
-      update("portraitImageAlt", profile.portraitImageAlt || file.name);
-    } finally {
-      setUploadingPortrait(false);
-    }
   }
 
   async function save(event: React.FormEvent) {
@@ -144,91 +126,6 @@ export function ProfileEditor() {
                 update("heroSecondaryUrl", event.target.value || null)
               }
             />
-          </Field>
-        </div>
-      </section>
-      <section className="cms-card cms-panel">
-        <div className="cms-section-title">
-          <h2>About and footer</h2>
-          <span>Public homepage</span>
-        </div>
-        <div className="cms-form-grid">
-          <Field label="About headline" wide>
-            <input
-              value={profile.aboutHeadline}
-              onChange={(event) => update("aboutHeadline", event.target.value)}
-              required
-            />
-          </Field>
-          <Field label="About body" wide>
-            <textarea
-              rows={5}
-              value={profile.aboutBody}
-              onChange={(event) => update("aboutBody", event.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Portrait image" wide>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              disabled={uploadingPortrait}
-              onChange={(event) => {
-                uploadPortrait(event.target.files?.[0]).catch(console.error);
-                event.target.value = "";
-              }}
-            />
-            <input
-              type="url"
-              value={profile.portraitImageUrl ?? ""}
-              onChange={(event) =>
-                update("portraitImageUrl", event.target.value || null)
-              }
-              placeholder="https://..."
-            />
-          </Field>
-          <Field label="Portrait alt">
-            <input
-              value={profile.portraitImageAlt ?? ""}
-              onChange={(event) =>
-                update("portraitImageAlt", event.target.value || null)
-              }
-            />
-          </Field>
-          <Field label="Short name / brand">
-            <input
-              value={profile.shortName}
-              onChange={(event) => update("shortName", event.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Footer location">
-            <input
-              value={profile.footerLocation}
-              onChange={(event) => update("footerLocation", event.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Footer timezone">
-            <input
-              value={profile.footerTimezone}
-              onChange={(event) => update("footerTimezone", event.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Content language">
-            <select
-              value={profile.contentLanguage}
-              onChange={(event) =>
-                update(
-                  "contentLanguage",
-                  event.target.value as SiteProfile["contentLanguage"],
-                )
-              }
-            >
-              <option value="en">English</option>
-              <option value="id">Indonesian</option>
-            </select>
           </Field>
         </div>
       </section>

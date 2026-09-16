@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Reveal from "../../components/Reveal";
 import type { ProjectMedia, ViewProject } from "../../types";
+import { defaultMediaTransform, mediaFrameStyle, mediaImageStyle } from "../../lib/media";
 
 const mediaUrl = (item: Pick<ProjectMedia, "mediaAsset" | "url">) =>
   item.mediaAsset?.publicUrl || item.url || "";
@@ -160,15 +161,18 @@ export function ProjectDetailView({
               {(gallery.length
                 ? gallery
                 : project.coverImageUrl
-                  ? [{ id: "cover", url: project.coverImageUrl, altText: project.title, caption: null }]
+                  ? [{ ...defaultMediaTransform, id: "cover", url: project.coverImageUrl, altText: project.title, caption: null }]
                   : []
               ).map((item, index) => mediaUrl(item) ? (
-                <figure key={item.id}>
-                  <img
-                    src={mediaUrl(item)}
-                    alt={item.altText || `${project.title} gallery ${index + 1}`}
-                    loading="lazy"
-                  />
+                <figure key={item.id} style={{ maxWidth: item.displayWidth ?? undefined }}>
+                  <div className="media-frame" style={mediaFrameStyle(item)}>
+                    <img
+                      src={mediaUrl(item)}
+                      alt={item.altText || `${project.title} gallery ${index + 1}`}
+                      loading="lazy"
+                      style={mediaImageStyle(item)}
+                    />
+                  </div>
                   {item.caption && <figcaption>{item.caption}</figcaption>}
                 </figure>
               ) : null)}

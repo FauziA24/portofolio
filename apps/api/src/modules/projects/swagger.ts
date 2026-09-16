@@ -26,6 +26,12 @@ const profileBody = {
     aboutBody: { type: "string", minLength: 10 },
     portraitImageUrl: { type: ["string", "null"] },
     portraitImageAlt: { type: ["string", "null"] },
+    portraitCropZoom: { type: "integer", minimum: 100, maximum: 300, default: 100 },
+    portraitFocalX: { type: "integer", minimum: 0, maximum: 100, default: 50 },
+    portraitFocalY: { type: "integer", minimum: 0, maximum: 100, default: 50 },
+    portraitAspectRatio: { type: "string", enum: ["auto", "1 / 1", "4 / 3", "3 / 2", "4 / 5", "16 / 9"], default: "4 / 5" },
+    portraitDisplayWidth: { type: ["integer", "null"], minimum: 1, maximum: 4096 },
+    portraitDisplayHeight: { type: ["integer", "null"], minimum: 1, maximum: 4096 },
     footerLocation: { type: "string", minLength: 2 },
     footerTimezone: { type: "string", minLength: 2 },
     contentLanguage: { type: "string", enum: ["en", "id"] },
@@ -208,9 +214,15 @@ const projectMediaItem = {
     caption: { type: ["string", "null"] },
     kind: { type: "string", enum: ["IMAGE", "VIDEO", "MOCKUP", "SCREENSHOT"] },
     sortOrder: { type: "integer" },
-    isHighlighted: { type: "boolean" }
+    isHighlighted: { type: "boolean" },
+    cropZoom: { type: "integer" },
+    focalX: { type: "integer" },
+    focalY: { type: "integer" },
+    aspectRatio: { type: "string" },
+    displayWidth: { type: ["integer", "null"] },
+    displayHeight: { type: ["integer", "null"] }
   },
-  required: ["id", "projectId", "altText", "kind", "sortOrder", "isHighlighted"]
+  required: ["id", "projectId", "altText", "kind", "sortOrder", "isHighlighted", "cropZoom", "focalX", "focalY", "aspectRatio"]
 } as const;
 const projectMediaBody = {
   type: "object",
@@ -223,7 +235,13 @@ const projectMediaBody = {
     caption: { type: ["string", "null"], maxLength: 240 },
     kind: { type: "string", enum: ["IMAGE", "VIDEO", "MOCKUP", "SCREENSHOT"], default: "IMAGE" },
     sortOrder: { type: "integer", minimum: 0, default: 0 },
-    isHighlighted: { type: "boolean", default: false }
+    isHighlighted: { type: "boolean", default: false },
+    cropZoom: { type: "integer", minimum: 100, maximum: 300, default: 100 },
+    focalX: { type: "integer", minimum: 0, maximum: 100, default: 50 },
+    focalY: { type: "integer", minimum: 0, maximum: 100, default: 50 },
+    aspectRatio: { type: "string", enum: ["auto", "1 / 1", "4 / 3", "3 / 2", "4 / 5", "16 / 9"], default: "4 / 3" },
+    displayWidth: { type: ["integer", "null"], minimum: 1, maximum: 4096 },
+    displayHeight: { type: ["integer", "null"], minimum: 1, maximum: 4096 }
   }
 } as const;
 
@@ -267,6 +285,7 @@ export const apiSchemas = {
   login: { tags: ["admin"], summary: "Sign in", body: { type: "object", required: ["email", "password"], properties: { email: { type: "string", format: "email" }, password: { type: "string" } } }, response: { 200: adminSession, 401: error, 429: error } },
   logout: { tags: ["admin"], summary: "Sign out" },
   me: { ...auth, summary: "Get current admin", response: { 200: adminSession, 401: error } },
+  dashboard: { ...auth, summary: "Get dashboard metric availability", response: { 401: error } },
   revokeSession: { ...auth, summary: "Revoke an admin session", params: params("id"), response: { 204: { type: "null" }, 401: error } },
   listAdmin: { ...auth, summary: "List all projects", response: { 401: error } },
   updateFeaturedProjects: { ...auth, summary: "Update selected work projects", body: featuredBody, response: { 401: error, 400: error } },

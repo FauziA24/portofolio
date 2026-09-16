@@ -1,4 +1,6 @@
-import type { Project } from "../../../types";
+import { useEffect, useState } from "react";
+import { api } from "../../../lib/api";
+import type { DashboardSummary, Project } from "../../../types";
 
 function StatCard({
   label,
@@ -19,6 +21,10 @@ function StatCard({
 }
 
 export function Dashboard({ projects }: { projects: Project[] }) {
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  useEffect(() => {
+    api.adminDashboard().then(setSummary).catch(() => setSummary(null));
+  }, []);
   const published = projects.filter(
     (project) => project.status === "PUBLISHED",
   ).length;
@@ -40,6 +46,24 @@ export function Dashboard({ projects }: { projects: Project[] }) {
           <h1>Analytics Dashboard</h1>
         </div>
         <span className="cms-pill warn">Analytics not connected</span>
+      </div>
+      <div className="cms-stats">
+        {([
+          ["Website visitors", "visitors"],
+          ["Performance", "performance"],
+          ["Organic traffic", "organicTraffic"],
+          ["Backlinks", "backlinks"],
+        ] as const).map(([label, key]) => {
+          const metric = summary?.metrics[key];
+          return (
+            <StatCard
+              key={key}
+              label={label}
+              value={metric?.value == null ? "Unavailable" : String(metric.value)}
+              helper={metric?.message ?? "Loading metric status"}
+            />
+          );
+        })}
       </div>
       <div className="cms-stats">
         <StatCard
@@ -78,14 +102,6 @@ export function Dashboard({ projects }: { projects: Project[] }) {
             <p className="cms-muted">No projects yet.</p>
           )}
         </div>
-      </section>
-      <section className="cms-card cms-panel muted-panel">
-        <h2>Traffic, SEO, backlinks, and Core Web Vitals</h2>
-        <p>
-          Desain dashboard sudah dimigrasikan sebagai area kerja, tetapi angka
-          analytics belum ditampilkan sampai sumber data production dipilih di
-          fase berikutnya.
-        </p>
       </section>
     </div>
   );

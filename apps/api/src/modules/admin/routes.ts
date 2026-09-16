@@ -8,6 +8,16 @@ export function adminPathRequiresSession(url: string) {
   return path.startsWith("/admin") && path !== "/admin/login";
 }
 
+export const dashboardSummary = {
+  generatedAt: null,
+  metrics: {
+    visitors: { status: "UNAVAILABLE", value: null, source: null, message: "Analytics not connected" },
+    performance: { status: "UNAVAILABLE", value: null, source: null, message: "Performance provider not connected" },
+    organicTraffic: { status: "UNAVAILABLE", value: null, source: null, message: "SEO provider not connected" },
+    backlinks: { status: "UNAVAILABLE", value: null, source: null, message: "Backlink provider not connected" }
+  }
+} as const;
+
 export async function adminRoutes(app: FastifyInstance) {
   app.post("/admin/login", { schema: adminSchemas.login }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
@@ -29,6 +39,11 @@ export async function adminRoutes(app: FastifyInstance) {
     const session = await requireAdminSession(request, app.db);
     return session ? { email: session.email, csrfToken: session.csrfToken } : reply.code(401).send({ message: "Unauthorized" });
   });
+
+  app.get("/admin/dashboard", { schema: adminSchemas.dashboard }, async () => ({
+    ...dashboardSummary,
+    generatedAt: new Date().toISOString()
+  }));
 
   app.delete("/admin/sessions/:id", { schema: adminSchemas.revokeSession }, async (request, reply) => {
     const { id } = idParams.parse(request.params);

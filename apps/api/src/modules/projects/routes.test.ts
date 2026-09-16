@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { adminPathRequiresSession } from "./routes.js";
+import { dashboardSummary } from "../admin/routes.js";
 import { demoStatusSchema, projectInput } from "./schema.js";
 
 test("project data accepts a real live demo URL", () => {
@@ -52,4 +53,11 @@ test("admin route guard handles prefixed API paths", () => {
   assert.equal(adminPathRequiresSession("/api/admin/profile?tab=seo"), true);
   assert.equal(adminPathRequiresSession("/api/admin/login"), false);
   assert.equal(adminPathRequiresSession("/api/projects"), false);
+});
+
+test("dashboard reports unavailable providers without fake values", () => {
+  for (const metric of Object.values(dashboardSummary.metrics)) {
+    assert.equal(metric.status, "UNAVAILABLE");
+    assert.equal(metric.value, null);
+  }
 });

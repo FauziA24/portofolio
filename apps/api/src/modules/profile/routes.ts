@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { profileFacts, siteProfiles } from "../../db/schema.js";
 import { idParams, reorderInput } from "../common/schema.js";
+import { normalizeProfileMedia } from "./media.js";
 import { factInput, profileInput } from "./schema.js";
 import { profileSchemas } from "./swagger.js";
 
@@ -10,20 +11,24 @@ const profileId = "default";
 
 export async function profileRoutes(app: FastifyInstance) {
   const getProfile = () => app.db.query.siteProfiles.findFirst({ where: (profile, { eq }) => eq(profile.id, profileId) });
+  const serializeProfile = async () => {
+    const profile = await getProfile();
+    return profile ? normalizeProfileMedia(profile) : undefined;
+  };
   const listFacts = (isAdmin = false) => app.db.query.profileFacts.findMany({
     where: isAdmin ? undefined : eq(profileFacts.isVisible, true),
     orderBy: [asc(profileFacts.sortOrder), asc(profileFacts.label)]
   });
 
   app.get("/profile", { schema: profileSchemas.profile }, async (_request, reply) => {
-    const profile = await getProfile();
+    const profile = await serializeProfile();
     return profile ?? reply.code(404).send({ message: "Profile not found" });
   });
 
   app.get("/profile/facts", { schema: profileSchemas.profileFacts }, async () => listFacts());
 
   app.get("/admin/profile", { schema: profileSchemas.adminProfile }, async (_request, reply) => {
-    const profile = await getProfile();
+    const profile = await serializeProfile();
     return profile ?? reply.code(404).send({ message: "Profile not found" });
   });
 
@@ -37,6 +42,8 @@ export async function profileRoutes(app: FastifyInstance) {
       heroSecondaryUrl: data.heroSecondaryUrl ?? null,
       portraitImageUrl: data.portraitImageUrl ?? null,
       portraitImageAlt: data.portraitImageAlt ?? null,
+      portraitDisplayWidth: data.portraitDisplayWidth ?? null,
+      portraitDisplayHeight: data.portraitDisplayHeight ?? null,
       seoTitle: data.seoTitle ?? null,
       seoDescription: data.seoDescription ?? null,
       seoImageUrl: data.seoImageUrl ?? null,
@@ -44,7 +51,7 @@ export async function profileRoutes(app: FastifyInstance) {
       updatedAt: new Date()
     };
     await app.db.insert(siteProfiles).values(row).onConflictDoUpdate({ target: siteProfiles.id, set: row });
-    return getProfile();
+    return serializeProfile();
   });
 
   app.get("/admin/profile/facts", { schema: profileSchemas.adminProfileFacts }, async () => listFacts(true));

@@ -15,5 +15,11 @@ export const projectMediaInput = z.object({
   caption: z.string().max(240).nullable().optional(),
   kind: z.enum(["IMAGE", "VIDEO", "MOCKUP", "SCREENSHOT"]).default("IMAGE"),
   sortOrder: z.number().int().min(0).default(0),
-  isHighlighted: z.boolean().default(false)
+  isHighlighted: z.boolean().default(false),
+  cropZoom: z.number().int().min(100).max(300).default(100),
+  focalX: z.number().int().min(0).max(100).default(50),
+  focalY: z.number().int().min(0).max(100).default(50),
+  aspectRatio: z.enum(["auto", "1 / 1", "4 / 3", "3 / 2", "4 / 5", "16 / 9"]).default("4 / 3"),
+  displayWidth: z.number().int().min(1).max(4096).nullable().optional(),
+  displayHeight: z.number().int().min(1).max(4096).nullable().optional()
 }).refine((data) => data.mediaAssetId || data.url, { message: "Media asset or URL is required" });

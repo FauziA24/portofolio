@@ -1,5 +1,6 @@
 import type {
   ContactLink,
+  DashboardSummary,
   MediaAsset,
   ProjectMedia,
   ProfileFact,
@@ -59,6 +60,12 @@ const profilePayload = (profile: SiteProfile) => {
     aboutBody,
     portraitImageUrl,
     portraitImageAlt,
+    portraitCropZoom,
+    portraitFocalX,
+    portraitFocalY,
+    portraitAspectRatio,
+    portraitDisplayWidth,
+    portraitDisplayHeight,
     footerLocation,
     footerTimezone,
     contentLanguage,
@@ -83,6 +90,12 @@ const profilePayload = (profile: SiteProfile) => {
     aboutBody,
     portraitImageUrl,
     portraitImageAlt,
+    portraitCropZoom,
+    portraitFocalX,
+    portraitFocalY,
+    portraitAspectRatio,
+    portraitDisplayWidth,
+    portraitDisplayHeight,
     footerLocation,
     footerTimezone,
     contentLanguage,
@@ -128,6 +141,12 @@ const projectMediaPayload = (
   kind: item.kind,
   sortOrder: item.sortOrder,
   isHighlighted: item.isHighlighted,
+  cropZoom: item.cropZoom,
+  focalX: item.focalX,
+  focalY: item.focalY,
+  aspectRatio: item.aspectRatio,
+  displayWidth: item.displayWidth || null,
+  displayHeight: item.displayHeight || null,
 });
 export const fileToDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -162,6 +181,7 @@ export const api = {
   adminLogout: () => adminRequest("/admin/logout", { method: "POST" }),
   adminMe: () =>
     adminRequest("/admin/me") as Promise<{ email: string; csrfToken: string }>,
+  adminDashboard: () => adminRequest("/admin/dashboard") as Promise<DashboardSummary>,
   adminProfile: () => adminRequest("/admin/profile") as Promise<SiteProfile>,
   saveProfile: (profile: SiteProfile) =>
     adminRequest(

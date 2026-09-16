@@ -1,6 +1,16 @@
 export type DemoStatus = "LIVE" | "COMING_SOON" | "PRIVATE" | "ARCHIVED";
 export type ProjectStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
+export type DashboardSummary = {
+  generatedAt: string;
+  metrics: Record<"visitors" | "performance" | "organicTraffic" | "backlinks", {
+    status: "AVAILABLE" | "UNAVAILABLE";
+    value: number | null;
+    source: string | null;
+    message: string;
+  }>;
+};
+
 export type Project = {
   id: string;
   slug: string;
@@ -50,6 +60,12 @@ export type SiteProfile = {
   aboutBody: string;
   portraitImageUrl?: string | null;
   portraitImageAlt?: string | null;
+  portraitCropZoom: number;
+  portraitFocalX: number;
+  portraitFocalY: number;
+  portraitAspectRatio: string;
+  portraitDisplayWidth?: number | null;
+  portraitDisplayHeight?: number | null;
   footerLocation: string;
   footerTimezone: string;
   contentLanguage: "en" | "id";
@@ -119,7 +135,16 @@ export type MediaAsset = {
 
 export type MediaKind = "IMAGE" | "VIDEO" | "MOCKUP" | "SCREENSHOT";
 
-export type ProjectMedia = {
+export type MediaTransform = {
+  cropZoom: number;
+  focalX: number;
+  focalY: number;
+  aspectRatio: string;
+  displayWidth?: number | null;
+  displayHeight?: number | null;
+};
+
+export type ProjectMedia = MediaTransform & {
   id: string;
   projectId: string;
   mediaAssetId?: string | null;

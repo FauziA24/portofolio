@@ -8,6 +8,7 @@ import type {
   ResearchItem,
   SiteProfile,
 } from "../types";
+import { mediaImageStyle } from "../lib/media";
 import Reveal from "../components/Reveal";
 import { lazy, Suspense } from "react";
 import {
@@ -380,6 +381,16 @@ function AboutSection({
   profile: SiteProfile;
   facts: ProfileFact[];
 }) {
+  const [portraitFailed, setPortraitFailed] = useState(false);
+  useEffect(() => setPortraitFailed(false), [profile.portraitImageUrl]);
+  const portraitTransform = {
+    cropZoom: profile.portraitCropZoom,
+    focalX: profile.portraitFocalX,
+    focalY: profile.portraitFocalY,
+    aspectRatio: profile.portraitAspectRatio,
+    displayWidth: profile.portraitDisplayWidth,
+    displayHeight: profile.portraitDisplayHeight,
+  };
   return (
     <section
       id="about"
@@ -396,10 +407,12 @@ function AboutSection({
               <span className="chip-path chip-path-right" aria-hidden="true" />
               <span className="chip-path chip-path-bottom" aria-hidden="true" />
               <div className="about-photo" data-label={profile.shortName}>
-                {profile.portraitImageUrl ? (
+                {profile.portraitImageUrl && !portraitFailed ? (
                   <img
                     src={profile.portraitImageUrl}
                     alt={profile.portraitImageAlt ?? ""}
+                    style={mediaImageStyle(portraitTransform)}
+                    onError={() => setPortraitFailed(true)}
                   />
                 ) : (
                   <span className="mono-label">{profile.shortName}</span>
