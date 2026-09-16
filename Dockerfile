@@ -31,4 +31,5 @@ RUN pnpm --filter @portfolio/web build
 
 FROM nginx:1.27-alpine AS web
 
+RUN sed -i '/index  index.html index.htm;/a\        try_files $uri $uri/ /index.html;' /etc/nginx/conf.d/default.conf
 COPY --from=web-build /app/apps/web/dist /usr/share/nginx/html

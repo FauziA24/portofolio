@@ -92,7 +92,12 @@ await db.insert(sitePreferences).values([
   { id: "site-tagline", key: "siteTagline", value: "Backend and web systems portfolio" },
   { id: "site-public-url", key: "publicUrl", value: "http://localhost:5173" },
   { id: "site-timezone", key: "timezone", value: "Asia/Jakarta" },
-  { id: "site-language", key: "contentLanguage", value: "en" }
+  { id: "site-language", key: "contentLanguage", value: "en" },
+  { id: "site-availability-label", key: "availabilityLabel", value: "Open to opportunities" },
+  { id: "site-contact-headline", key: "contactHeadline", value: "Have a system worth making simpler?\nLet's talk." },
+  { id: "site-projects-kicker", key: "projectsKicker", value: "01 / Archive" },
+  { id: "site-projects-title", key: "projectsTitle", value: "All selected *work.*" },
+  { id: "site-projects-description", key: "projectsDescription", value: "Projects, experiments, and systems built across web development, backend engineering, AI, and research." }
 ]).onConflictDoNothing({ target: sitePreferences.key });
 
 await pool.end();

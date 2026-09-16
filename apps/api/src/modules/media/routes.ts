@@ -19,16 +19,20 @@ export async function mediaRoutes(app: FastifyInstance) {
     orderBy: [asc(projectMedia.sortOrder), asc(projectMedia.createdAt)],
     with: { mediaAsset: true }
   });
-  const mediaUrl = (row: Awaited<ReturnType<typeof listProjectMedia>>[number]) => row.mediaAsset?.publicUrl ?? row.url;
+  const serializeProjectMedia = (row: Awaited<ReturnType<typeof listProjectMedia>>[number]) => ({
+    ...row,
+    url: row.mediaAsset ? publicMediaUrl(config.S3_PUBLIC_URL, row.mediaAsset.storageKey) : row.url
+  });
 
   app.get("/projects/:slug/media", { schema: mediaSchemas.projectMedia }, async (request, reply) => {
     const project = await service.bySlug(slugParams.parse(request.params).slug);
     if (!project) return reply.code(404).send({ message: "Project not found" });
-    return (await listProjectMedia(project.id)).map((row) => ({ ...row, url: mediaUrl(row) }));
+    return (await listProjectMedia(project.id)).map(serializeProjectMedia);
   });
 
   app.get("/admin/media", { schema: mediaSchemas.adminMedia }, async () => {
-    return app.db.query.mediaAssets.findMany({ orderBy: [asc(mediaAssets.createdAt)] });
+    return (await app.db.query.mediaAssets.findMany({ orderBy: [asc(mediaAssets.createdAt)] }))
+      .map((asset) => ({ ...asset, publicUrl: publicMediaUrl(config.S3_PUBLIC_URL, asset.storageKey) }));
   });
 
   app.post("/admin/media", { schema: mediaSchemas.uploadMedia }, async (request, reply) => {
@@ -66,7 +70,7 @@ export async function mediaRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/projects/:id/media", { schema: mediaSchemas.adminProjectMedia }, async (request) => {
-    return listProjectMedia(idParams.parse(request.params).id);
+    return (await listProjectMedia(idParams.parse(request.params).id)).map(serializeProjectMedia);
   });
 
   app.post("/admin/projects/:id/media", { schema: mediaSchemas.createProjectMedia }, async (request, reply) => {
@@ -96,6 +100,6 @@ export async function mediaRoutes(app: FastifyInstance) {
     await app.db.transaction(async (tx) => {
       for (const row of rows) await tx.update(projectMedia).set({ sortOrder: row.sortOrder, updatedAt: new Date() }).where(eq(projectMedia.id, row.id));
     });
-    return listProjectMedia(id);
+    return (await listProjectMedia(id)).map(serializeProjectMedia);
   });
 }

@@ -90,7 +90,11 @@ function ProjectTile({
   );
 }
 
-export default function Projects() {
+export default function Projects({
+  settings,
+}: {
+  settings: Record<string, string>;
+}) {
   const { projects, loading, error } = useProjects();
   const reduced = useReducedMotion();
   const [page, setPage] = useState(0);
@@ -107,6 +111,8 @@ export default function Projects() {
   const lastPage = Math.max(pages.length - 1, 0);
   const goToPage = (nextPage: number) =>
     setPage(Math.min(Math.max(nextPage, 0), lastPage));
+  const title = settings.projectsTitle ?? "";
+  const titleParts = title.split("*");
 
   return (
     <main className="projects-page">
@@ -114,14 +120,19 @@ export default function Projects() {
         <Link to="/" className="mono-label back-link">
           ← Home
         </Link>
-        <p className="mono-label">01 / Archive</p>
-        <h1>
-          All selected <em>work.</em>
-        </h1>
-        <p>
-          Projects, experiments, and systems built across web development,
-          backend engineering, AI, and research.
-        </p>
+        {settings.projectsKicker && (
+          <p className="mono-label">{settings.projectsKicker}</p>
+        )}
+        {title && (
+          <h1>
+            {titleParts.map((part, index) =>
+              index % 2 ? <em key={index}>{part}</em> : part,
+            )}
+          </h1>
+        )}
+        {settings.projectsDescription && (
+          <p>{settings.projectsDescription}</p>
+        )}
       </div>
       {loading && (
         <p className="mono-label" role="status">

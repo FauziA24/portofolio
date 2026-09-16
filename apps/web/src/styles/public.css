@@ -216,7 +216,7 @@
   opacity: .55;
 }
 .about-photo::after {
-  content: "MFA";
+  content: attr(data-label);
   position: absolute;
   inset: 0;
   display: grid;
@@ -501,10 +501,13 @@ main > .research-section { overflow: visible; background: var(--surface); }
 @keyframes show-more-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .project-gallery { border-top: 1px solid var(--border); padding-top: 18px; }
 .gallery-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 12px; }
+.gallery-grid figure { min-width: 0; }
 .gallery-grid img { width: 100%; aspect-ratio: 1.35; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--border); filter: saturate(.85); transition: transform .5s cubic-bezier(.16,1,.3,1), filter .4s ease; }
-.gallery-grid img:first-child { grid-row: span 2; aspect-ratio: .82; }
+.gallery-grid figure:first-child { grid-row: span 2; }
+.gallery-grid figure:first-child img { aspect-ratio: .82; }
+.gallery-grid figcaption { padding-top: 7px; color: var(--muted-foreground); font-size: 12px; line-height: 1.45; }
 .gallery-grid img:hover { transform: scale(1.02); filter: saturate(1); }
 @media (max-width: 700px) { .projects-page { padding: 106px 1.5rem 80px; } .projects-heading { padding-bottom: 52px; } .projects-heading .back-link { margin-bottom: 42px; } .project-section-status { justify-content: flex-start; margin-top: -10px; } .project-grid { grid-template-columns: 1fr; gap: 42px; } .project-pager { gap: 12px; padding-top: 42px; } .project-pager-button { min-width: 78px; } }
   @media (max-width: 700px) { .creative-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .creative-button { justify-content: center; min-height: 46px; } }
-  @media (max-width: 560px) { .gallery-grid { grid-template-columns: 1fr; } .gallery-grid img:first-child { grid-row: auto; aspect-ratio: 1.35; } .creative-buttons { grid-template-columns: 1fr; } .show-more-button { width: 100%; min-width: 0; } }
+  @media (max-width: 560px) { .gallery-grid { grid-template-columns: 1fr; } .gallery-grid figure:first-child { grid-row: auto; } .gallery-grid figure:first-child img { aspect-ratio: 1.35; } .creative-buttons { grid-template-columns: 1fr; } .show-more-button { width: 100%; min-width: 0; } }
   @media (prefers-reduced-motion: reduce) { .show-more-marquee { animation: none !important; } .creative-button, .show-more-button { transition: none; } }

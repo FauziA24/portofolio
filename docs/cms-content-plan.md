@@ -5,6 +5,15 @@
 > prototype. Where this plan conflicts with the PRD (notably analytics,
 > Settings, project preview, and persistent uploads), the PRD takes precedence.
 
+## Current Project Media Addendum
+
+- The Projects editor uses persistent file uploads only; administrators do not enter image URLs for cover, highlight, hover preview, or gallery media.
+- One file selection may contain multiple JPEG, PNG, or WebP images. Each item shows queued, uploading, ready, or failed feedback before it becomes a persisted `ProjectMedia` row.
+- Uploaded gallery assets can be assigned as cover, highlight, or homepage hover preview media. Permanent public URLs remain storage-derived implementation details.
+- `Save draft` persists `Project.status = DRAFT` and permits incomplete content after title and unique slug are provided. `Save` applies full publication validation when status is `PUBLISHED`.
+- CMS preview uses current form and gallery state through the same renderer as the public project detail page. Its back action returns to the CMS editor and draft content remains excluded from public queries.
+- Existing `Project`, `MediaAsset`, and `ProjectMedia` tables cover this workflow; no additional table is required.
+
 ## Cleaned Request
 
 Build a CMS/admin area for managing all portfolio website content from one private interface. The CMS must allow content to be created, edited, reordered, published/unpublished, and deleted where appropriate.

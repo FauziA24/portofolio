@@ -27,6 +27,26 @@ test("project data accepts SEO and indexing fields", () => {
   assert.equal(parsed.sortOrder, 2);
 });
 
+test("draft projects may be incomplete", () => {
+  const parsed = projectInput.parse({
+    title: "Draft project", slug: "draft-project", category: "", role: "", summary: "",
+    challenge: "", contribution: "", solution: "", status: "DRAFT", technologies: []
+  });
+  assert.equal(parsed.status, "DRAFT");
+});
+
+test("published projects require complete content", () => {
+  const parsed = projectInput.safeParse({
+    title: "Incomplete project", slug: "incomplete-project", category: "", role: "", summary: "",
+    challenge: "", contribution: "", solution: "", status: "PUBLISHED", technologies: []
+  });
+  assert.equal(parsed.success, false);
+  if (!parsed.success) {
+    assert.equal(parsed.error.issues.some((issue) => issue.path[0] === "technologies"), true);
+    assert.equal(parsed.error.issues.some((issue) => issue.path[0] === "overview"), true);
+  }
+});
+
 test("admin route guard handles prefixed API paths", () => {
   assert.equal(adminPathRequiresSession("/api/admin/profile"), true);
   assert.equal(adminPathRequiresSession("/api/admin/profile?tab=seo"), true);

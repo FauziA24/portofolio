@@ -191,7 +191,7 @@ Store alt text, caption, position, media kind, and highlight status.
 
 Outcome: project detail pages no longer depend on hardcoded galleries.
 
-Status: implemented with public/admin `ProjectMedia` endpoints, CMS gallery controls, media ordering, alt/caption/kind/highlight fields, and `ProjectDetail.tsx` reading gallery data from the API.
+Status: implemented with public/admin `ProjectMedia` endpoints, upload-only multi-image CMS controls, per-file draft previews, media ordering, alt/caption/highlight fields, and a shared project-detail renderer for public and CMS preview views.
 
 ## Phase 10 - Implement SEO And Settings
 
@@ -238,7 +238,7 @@ loading -> saving -> saved
 
 Outcome: the admin UI edits the real API-backed content groups instead of local or mock state.
 
-Status: implemented for Profile & Homepage, Selected Work, About, Research, Contact, SEO, Settings, and project Media upload/gallery areas.
+Status: implemented for Profile & Homepage, Selected Work, About, Research, Contact, SEO, Settings, and project media upload/gallery areas. Projects provide separate draft/save actions and CMS preview returns directly to the editor.
 
 ## Phase 12 - Complete Swagger Coverage
 
@@ -288,7 +288,7 @@ pnpm test
 pnpm build
 ```
 
-Status: implemented with focused tests for auth, project validation, SEO/indexing input, media validation, image dimensions, and public media URL generation. Current verification commands pass: `pnpm check`, `pnpm test`, and `pnpm build`.
+Status: implemented with focused tests for auth, draft-versus-publication project validation, SEO/indexing input, media validation, image dimensions, and public media URL generation. Current verification commands are `pnpm check`, `pnpm test`, and `pnpm build`.
 
 Outcome: the release candidate has automated coverage for the risky paths.
 

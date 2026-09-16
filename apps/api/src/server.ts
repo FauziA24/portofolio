@@ -80,11 +80,12 @@ export function buildServer() {
           summary: "S3-compatible bucket health check",
         },
       },
-      async (_request, reply) => {
+      async (request, reply) => {
         try {
           await checkStorageBucket();
           return { status: "ok", bucket: config.S3_BUCKET };
-        } catch {
+        } catch (error) {
+          request.log.warn({ err: error }, "storage health check failed");
           return reply.code(503).send({ status: "error" });
         }
       },

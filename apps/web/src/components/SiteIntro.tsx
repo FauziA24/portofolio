@@ -1,9 +1,10 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import type { SiteProfile } from "../types";
 
-const STORAGE_KEY = "mfa-gate-intro-seen";
+const STORAGE_KEY = "site-gate-intro-seen";
 
-export default function SiteIntro() {
+export default function SiteIntro({ profile }: { profile: SiteProfile }) {
   const reduced = useReducedMotion();
   const [visible, setVisible] = useState(
     () => sessionStorage.getItem(STORAGE_KEY) !== "true",
@@ -111,7 +112,9 @@ export default function SiteIntro() {
           <div className="gate-piston" />
           <div className="gate-seam" />
           <span className="gate-serial">
-            {side === -1 ? "MFA / 01" : "SPARTAN / 02"}
+            {side === -1
+              ? `${profile.shortName} / 01`
+              : `${profile.contentLanguage.toUpperCase()} / 02`}
           </span>
           <div className="gate-bolts">
             {[0, 1, 2, 3].map((i) => (
@@ -123,8 +126,8 @@ export default function SiteIntro() {
 
       <div className="gate-interface">
         <div className="gate-header">
-          <span>MOHAMMAD FAUZI AZIZ</span>
-          <span>PORTFOLIO / 2026</span>
+          <span>{profile.displayName.toUpperCase()}</span>
+          <span>{profile.shortName} / 2026</span>
         </div>
         <div className="gate-center">
           <div className="gate-lock" aria-hidden="true">
@@ -169,7 +172,7 @@ export default function SiteIntro() {
           </div>
         </div>
         <div className="gate-footer">
-          <span>BACKEND / WEB / AI</span>
+          <span>{profile.role.toUpperCase()}</span>
           <span className="gate-state">
             <i />
             {progress === 100 ? "UNLOCKED" : "STANDBY"}

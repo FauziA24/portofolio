@@ -2,17 +2,28 @@ import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Check, Eye, Plus, Trash2 } from "lucide-react";
 import { Field } from "../components/Field";
 import { SaveBadge } from "../components/SaveBadge";
+import { ProjectDetailView } from "../../projects/ProjectDetailView";
+import { toViewProject } from "../../projects/mappers";
 import { moveOrdered, withSave } from "../helpers";
-import { api, fileToBase64 } from "../../../lib/api";
-import type { MediaAsset, Project, ProjectMedia } from "../../../types";
+import { api, fileToDataUrl } from "../../../lib/api";
+import type { Project, ProjectMedia } from "../../../types";
 import type { SaveState } from "../types";
 import {
   blankProject,
   fieldLabel,
+  projectFormToProject,
   projectToForm,
   toProjectPayload,
   type ProjectForm,
 } from "../forms";
+
+type PendingMedia = {
+  id: string;
+  file: File;
+  previewUrl: string;
+  status: "queued" | "uploading" | "failed";
+  error?: string;
+};
 
 export function ProjectEditor({
   projects,
@@ -28,18 +39,11 @@ export function ProjectEditor({
   const [tab, setTab] = useState<
     "info" | "content" | "media" | "links" | "seo"
   >("info");
-  const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [media, setMedia] = useState<ProjectMedia[]>([]);
-  const [mediaDraft, setMediaDraft] = useState({
-    mediaAssetId: "",
-    url: "",
-    altText: "",
-    caption: "",
-    kind: "IMAGE",
-    isHighlighted: "false",
-  });
+  const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const active = projects.find((project) => project.id === activeId);
 
   useEffect(() => {
     if (!activeId && projects[0]) {
@@ -47,13 +51,6 @@ export function ProjectEditor({
       setForm(projectToForm(projects[0]));
     }
   }, [activeId, projects]);
-
-  useEffect(() => {
-    api
-      .adminMedia()
-      .then(setAssets)
-      .catch(() => setAssets([]));
-  }, []);
 
   useEffect(() => {
     if (!activeId) return setMedia([]);
@@ -67,50 +64,69 @@ export function ProjectEditor({
     setActiveId(project.id);
     setForm(projectToForm(project));
     setTab("info");
+    setPendingMedia([]);
   }
 
   function update(key: string, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  async function uploadProjectImage(file?: File) {
-    if (!file || !activeId) return;
-    const asset = await api.uploadMedia({
-      fileName: file.name,
-      mimeType: file.type,
-      dataBase64: await fileToBase64(file),
-      scope: "projects",
-      projectId: activeId,
-    });
-    setAssets((current) => [asset, ...current]);
-    setMediaDraft((current) => ({
-      ...current,
-      mediaAssetId: asset.id,
-      url: "",
-      altText: current.altText || active?.title || file.name,
-    }));
+  async function uploadProjectImages(files?: FileList | null) {
+    if (!files?.length || !activeId) return;
+    const selected = await Promise.all(Array.from(files).map(async (file) => ({
+      id: crypto.randomUUID(),
+      file,
+      previewUrl: await fileToDataUrl(file),
+      status: "queued" as const,
+    })));
+    setPendingMedia((current) => [...current, ...selected]);
+    setUploadingMedia(true);
+    for (const [index, pending] of selected.entries()) {
+      setPendingMedia((current) => current.map((item) =>
+        item.id === pending.id ? { ...item, status: "uploading" } : item,
+      ));
+      let assetId = "";
+      try {
+        const asset = await api.uploadMedia({
+          fileName: pending.file.name,
+          mimeType: pending.file.type,
+          dataBase64: pending.previewUrl.split(",")[1] ?? "",
+          scope: "projects",
+          projectId: activeId,
+        });
+        assetId = asset.id;
+        const row = await api.createProjectMedia(activeId, {
+          mediaAssetId: asset.id,
+          url: null,
+          altText: form.title || pending.file.name,
+          caption: null,
+          kind: "IMAGE",
+          sortOrder: media.length + index,
+          isHighlighted: false,
+        });
+        setMedia((current) => [...current, { ...row, mediaAsset: asset }]);
+        setPendingMedia((current) => current.filter((item) => item.id !== pending.id));
+      } catch (error) {
+        if (assetId) await api.deleteMedia(assetId).catch(() => null);
+        setPendingMedia((current) => current.map((item) => item.id === pending.id
+          ? { ...item, status: "failed", error: error instanceof Error ? error.message : "Upload failed" }
+          : item,
+        ));
+      }
+    }
+    setUploadingMedia(false);
   }
 
-  async function addProjectMedia() {
-    if (!activeId) return;
-    const row = await api.createProjectMedia(activeId, {
-      mediaAssetId: mediaDraft.mediaAssetId || null,
-      url: mediaDraft.mediaAssetId ? null : mediaDraft.url,
-      altText: mediaDraft.altText,
-      caption: mediaDraft.caption || null,
-      kind: mediaDraft.kind as ProjectMedia["kind"],
-      sortOrder: media.length,
-      isHighlighted: mediaDraft.isHighlighted === "true",
-    });
-    setMedia((current) => [...current, row]);
-    setMediaDraft({
-      mediaAssetId: "",
-      url: "",
-      altText: "",
-      caption: "",
-      kind: "IMAGE",
-      isHighlighted: "false",
-    });
+  function useMediaAs(item: ProjectMedia, target: "cover" | "highlight" | "hover") {
+    const url = item.mediaAsset?.publicUrl || item.url || "";
+    if (target === "cover") return update("coverImageUrl", url);
+    if (target === "highlight") {
+      update("highlightImageUrl", url);
+      update("highlightImageAlt", item.altText);
+      return;
+    }
+    update("hoverPreviewImageUrl", url);
+    update("hoverPreviewImageAlt", item.altText);
   }
 
   async function saveMedia(row: ProjectMedia) {
@@ -135,14 +151,18 @@ export function ProjectEditor({
     );
   }
 
-  async function save(event?: React.FormEvent) {
-    event?.preventDefault();
+  async function persist(status?: Project["status"]) {
     await withSave(setSaveState, async () => {
-      const saved = await api.saveProject(toProjectPayload(form));
+      const saved = await api.saveProject(toProjectPayload(status ? { ...form, status } : form));
       setActiveId(saved.id);
       setForm(projectToForm(saved));
       await onReload();
     });
+  }
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    await persist();
   }
 
   async function remove() {
@@ -151,6 +171,19 @@ export function ProjectEditor({
     setActiveId("");
     setForm(blankProject);
     await onReload();
+  }
+
+  if (previewing) {
+    return (
+      <div className="cms-project-preview">
+        <ProjectDetailView
+          project={toViewProject(projectFormToProject(form), 0)}
+          gallery={media}
+          previewLabel={form.status === "PUBLISHED" ? "CMS Preview" : "Draft Preview"}
+          onBack={() => setPreviewing(false)}
+        />
+      </div>
+    );
   }
 
   return (
@@ -162,6 +195,8 @@ export function ProjectEditor({
             onClick={() => {
               setActiveId("");
               setForm(blankProject);
+              setMedia([]);
+              setPendingMedia([]);
             }}
             title="New project"
           >
@@ -193,16 +228,9 @@ export function ProjectEditor({
           </div>
           <div className="cms-actions">
             <SaveBadge state={saveState} />
-            {active?.slug && (
-              <a
-                className="cms-button"
-                href={`/projects/${active.slug}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Eye size={16} /> Preview
-              </a>
-            )}
+            <button className="cms-button" type="button" onClick={() => setPreviewing(true)}>
+              <Eye size={16} /> Preview
+            </button>
             {form.id && (
               <button
                 className="cms-button danger"
@@ -212,6 +240,9 @@ export function ProjectEditor({
                 <Trash2 size={16} /> Delete
               </button>
             )}
+            <button className="cms-button" type="button" onClick={() => persist("DRAFT")}>
+              Save draft
+            </button>
             <button className="cms-button primary">
               <Check size={16} /> Save
             </button>
@@ -247,9 +278,8 @@ export function ProjectEditor({
                   <input
                     value={form[key] ?? ""}
                     onChange={(event) => update(key, event.target.value)}
-                    required={["title", "slug", "category", "role"].includes(
-                      key,
-                    )}
+                    required={["title", "slug"].includes(key) ||
+                      (form.status === "PUBLISHED" && ["category", "role"].includes(key))}
                   />
                 </Field>
               ))}
@@ -313,7 +343,7 @@ export function ProjectEditor({
                     value={form[key] ?? ""}
                     onChange={(event) => update(key, event.target.value)}
                     rows={key === "summary" ? 3 : 6}
-                    required={key !== "overview"}
+                    required={form.status === "PUBLISHED"}
                   />
                 </Field>
               ))}
@@ -321,153 +351,52 @@ export function ProjectEditor({
           )}
           {tab === "media" && (
             <>
-              <Field label="Cover image URL" wide>
-                <input
-                  type="url"
-                  value={form.coverImageUrl}
-                  onChange={(event) =>
-                    update("coverImageUrl", event.target.value)
-                  }
-                  placeholder="https://..."
-                />
-              </Field>
-              <div className="cms-preview wide">
-                {form.coverImageUrl ? (
-                  <img src={form.coverImageUrl} alt="" />
-                ) : (
-                  <span>No image selected</span>
-                )}
+              <div className="cms-media-roles wide">
+                {[
+                  ["Cover", form.coverImageUrl],
+                  ["Highlight", form.highlightImageUrl],
+                  ["Hover preview", form.hoverPreviewImageUrl],
+                ].map(([label, url]) => (
+                  <div className="cms-card" key={label}>
+                    <span>{label}</span>
+                    {url ? <img src={url} alt="" /> : <p>Not selected</p>}
+                  </div>
+                ))}
               </div>
-              <Field label="Highlight image URL" wide>
-                <input
-                  type="url"
-                  value={form.highlightImageUrl}
-                  onChange={(event) =>
-                    update("highlightImageUrl", event.target.value)
-                  }
-                  placeholder="https://..."
-                />
-              </Field>
-              <Field label="Highlight image alt" wide>
-                <input
-                  value={form.highlightImageAlt}
-                  onChange={(event) =>
-                    update("highlightImageAlt", event.target.value)
-                  }
-                />
-              </Field>
               <section className="cms-card cms-panel wide">
                 <div className="cms-section-title">
                   <h2>Gallery</h2>
                   <span>{media.length} items</span>
                 </div>
-                {activeId && (
-                  <div className="cms-form-grid">
-                    <Field label="Upload image">
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        onChange={(event) =>
-                          uploadProjectImage(event.target.files?.[0]).catch(
-                            console.error,
-                          )
-                        }
-                      />
-                    </Field>
-                    <Field label="Existing asset">
-                      <select
-                        value={mediaDraft.mediaAssetId}
-                        onChange={(event) =>
-                          setMediaDraft((current) => ({
-                            ...current,
-                            mediaAssetId: event.target.value,
-                            url: "",
-                          }))
-                        }
-                      >
-                        <option value="">Use URL</option>
-                        {assets.map((asset) => (
-                          <option key={asset.id} value={asset.id}>
-                            {asset.originalName}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="External URL" wide>
-                      <input
-                        type="url"
-                        value={mediaDraft.url}
-                        onChange={(event) =>
-                          setMediaDraft((current) => ({
-                            ...current,
-                            url: event.target.value,
-                          }))
-                        }
-                        disabled={!!mediaDraft.mediaAssetId}
-                      />
-                    </Field>
-                    <Field label="Alt text">
-                      <input
-                        value={mediaDraft.altText}
-                        onChange={(event) =>
-                          setMediaDraft((current) => ({
-                            ...current,
-                            altText: event.target.value,
-                          }))
-                        }
-                        required
-                      />
-                    </Field>
-                    <Field label="Caption">
-                      <input
-                        value={mediaDraft.caption}
-                        onChange={(event) =>
-                          setMediaDraft((current) => ({
-                            ...current,
-                            caption: event.target.value,
-                          }))
-                        }
-                      />
-                    </Field>
-                    <Field label="Kind">
-                      <select
-                        value={mediaDraft.kind}
-                        onChange={(event) =>
-                          setMediaDraft((current) => ({
-                            ...current,
-                            kind: event.target.value,
-                          }))
-                        }
-                      >
-                        <option>IMAGE</option>
-                        <option>VIDEO</option>
-                        <option>MOCKUP</option>
-                        <option>SCREENSHOT</option>
-                      </select>
-                    </Field>
-                    <Field label="Highlight">
-                      <select
-                        value={mediaDraft.isHighlighted}
-                        onChange={(event) =>
-                          setMediaDraft((current) => ({
-                            ...current,
-                            isHighlighted: event.target.value,
-                          }))
-                        }
-                      >
-                        <option value="false">No</option>
-                        <option value="true">Yes</option>
-                      </select>
-                    </Field>
-                    <div className="cms-actions">
-                      <button
-                        className="cms-button primary"
-                        type="button"
-                        onClick={() => addProjectMedia()}
-                      >
-                        <Plus size={16} /> Add media
-                      </button>
-                    </div>
+                <Field label="Upload images" wide>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={!activeId || uploadingMedia}
+                    onChange={(event) => {
+                      uploadProjectImages(event.target.files).catch(console.error);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </Field>
+                {!activeId && <p className="cms-muted">Save draft before uploading images.</p>}
+                {!!pendingMedia.length && (
+                  <div className="cms-upload-previews">
+                    {pendingMedia.map((item) => (
+                      <div className={`cms-upload-preview ${item.status}`} key={item.id}>
+                        <img src={item.previewUrl} alt="" />
+                        <div>
+                          <strong>{item.file.name}</strong>
+                          <span>{item.error || item.status}</span>
+                        </div>
+                        {item.status === "failed" && (
+                          <button type="button" className="cms-button" onClick={() => setPendingMedia((current) => current.filter((row) => row.id !== item.id))}>
+                            Dismiss
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
                 <div className="cms-list cms-media-list">
@@ -503,6 +432,11 @@ export function ProjectEditor({
                         }
                         aria-label="Caption"
                       />
+                      <div className="cms-media-role-actions">
+                        <button className="cms-button" type="button" onClick={() => useMediaAs(item, "cover")}>Cover</button>
+                        <button className="cms-button" type="button" onClick={() => useMediaAs(item, "highlight")}>Highlight</button>
+                        <button className="cms-button" type="button" onClick={() => useMediaAs(item, "hover")}>Hover</button>
+                      </div>
                       <button
                         className="cms-button"
                         type="button"

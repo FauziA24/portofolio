@@ -5,6 +5,8 @@ services:
     image: fauzia24/portofolio-api:v1.0.0
     container_name: portfolio-api
     restart: unless-stopped
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-3001}:3001"
     networks:
       service_service_network:
         aliases:
@@ -16,16 +18,13 @@ services:
           - portfolio-api
           - api
     environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-portfolio}:${POSTGRES_PASSWORD:-portfolio}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-portfolio}
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-5}
       PORT: 3001
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TRUST_PROXY: "true"
       API_BODY_LIMIT_BYTES: ${API_BODY_LIMIT_BYTES:-6291456}
       CORS_ORIGIN: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
-      ADMIN_TOKEN: ${ADMIN_TOKEN:?ADMIN_TOKEN is required}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
       S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT is required}
       S3_REGION: ${S3_REGION:-auto}
       S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
@@ -33,26 +32,27 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is required}
       S3_FORCE_PATH_STYLE: "true"
       S3_PUBLIC_URL: ${PUBLIC_ORIGIN}/s3/${S3_BUCKET}
-    command: >
-      sh -c "pnpm --filter @portfolio/api db:migrate &&
-             until pnpm --filter @portfolio/api storage:setup; do sleep 2; done &&
-             pnpm --filter @portfolio/api db:seed &&
-             pnpm --filter @portfolio/api start"
+    command: |
+      sh -c '
+        until pnpm --filter @portfolio/api db:migrate; do sleep 2; done
+        until pnpm --filter @portfolio/api storage:setup; do sleep 2; done
+        until pnpm --filter @portfolio/api db:seed; do sleep 2; done
+        exec pnpm --filter @portfolio/api start
+      '
 
   web:
     image: fauzia24/portofolio-web:v1.0.0
     container_name: portfolio-web
     restart: unless-stopped
+    ports:
+      - "${WEB_BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-5173}:80"
     networks:
       service_service_network:
         aliases:
-          - portfolio-api
-          - api
-      database_database_network:
+          - portfolio-web
       project_network:
         aliases:
-          - portfolio-api
-          - api
+          - portfolio-web
 networks:
   service_service_network:
     external: true

@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import type { SiteProfile } from "../types";
 
 interface NavProps {
+  profile: SiteProfile | null;
+  availabilityLabel: string;
   theme: "dark" | "light";
   onToggle: () => void;
 }
 
-export default function Nav({ theme, onToggle }: NavProps) {
+export default function Nav({
+  profile,
+  availabilityLabel,
+  theme,
+  onToggle,
+}: NavProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
@@ -38,7 +46,7 @@ export default function Nav({ theme, onToggle }: NavProps) {
           className="font-bold text-[15px] tracking-tight font-display"
           aria-label="Home"
         >
-          MFA
+          {profile?.shortName ?? ""}
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
@@ -61,19 +69,22 @@ export default function Nav({ theme, onToggle }: NavProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          <span
-            className="hidden sm:inline-flex mono-label items-center gap-1.5 px-2.5 py-1 rounded-full border"
-            style={{
-              borderColor: "color-mix(in srgb, var(--accent) 40%, transparent)",
-              color: "var(--accent)",
-            }}
-          >
+          {availabilityLabel && (
             <span
-              className="w-1.5 h-1.5 rounded-full animate-pulse"
-              style={{ background: "var(--accent)" }}
-            />
-            Open to opportunities
-          </span>
+              className="hidden sm:inline-flex mono-label items-center gap-1.5 px-2.5 py-1 rounded-full border"
+              style={{
+                borderColor:
+                  "color-mix(in srgb, var(--accent) 40%, transparent)",
+                color: "var(--accent)",
+              }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: "var(--accent)" }}
+              />
+              {availabilityLabel}
+            </span>
+          )}
 
           <button
             onClick={onToggle}
@@ -170,21 +181,23 @@ export default function Nav({ theme, onToggle }: NavProps) {
                 {l.label}
               </a>
             ))}
-            <div
-              className="pt-3 border-t"
-              style={{ borderColor: "var(--border)" }}
-            >
-              <span
-                className="mono-label inline-flex items-center gap-1.5"
-                style={{ color: "var(--accent)" }}
+            {availabilityLabel && (
+              <div
+                className="pt-3 border-t"
+                style={{ borderColor: "var(--border)" }}
               >
                 <span
-                  className="w-1.5 h-1.5 rounded-full animate-pulse"
-                  style={{ background: "var(--accent)" }}
-                />
-                Open to opportunities
-              </span>
-            </div>
+                  className="mono-label inline-flex items-center gap-1.5"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full animate-pulse"
+                    style={{ background: "var(--accent)" }}
+                  />
+                  {availabilityLabel}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

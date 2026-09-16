@@ -4,7 +4,7 @@ import Fastify from "fastify";
 import { installErrorHandling } from "./observability.js";
 import { installSecurityHeaders } from "./security.js";
 
-test("public API responses receive CDN-friendly cache and security headers", async () => {
+test("public API content responses are not cached", async () => {
   const app = Fastify({ logger: false });
   installSecurityHeaders(app);
   app.get("/api/projects", async () => ({ ok: true }));
@@ -13,7 +13,20 @@ test("public API responses receive CDN-friendly cache and security headers", asy
 
   assert.equal(response.headers["x-content-type-options"], "nosniff");
   assert.equal(response.headers["x-frame-options"], "DENY");
-  assert.equal(response.headers["cache-control"], "public, max-age=60, stale-while-revalidate=300");
+  assert.equal(response.headers["cache-control"], "no-store");
+});
+
+test("sitemap and robots responses receive CDN-friendly cache headers", async () => {
+  const app = Fastify({ logger: false });
+  installSecurityHeaders(app);
+  app.get("/sitemap.xml", async () => "ok");
+
+  const response = await app.inject({ method: "GET", url: "/sitemap.xml" });
+
+  assert.equal(
+    response.headers["cache-control"],
+    "public, max-age=60, stale-while-revalidate=300",
+  );
 });
 
 test("admin API responses are not cached", async () => {

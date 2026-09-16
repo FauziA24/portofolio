@@ -187,6 +187,27 @@ function toProjectPayload(form: ProjectForm) {
   };
 }
 
+function projectFormToProject(form: ProjectForm): Project {
+  const { technologies, ...project } = toProjectPayload(form);
+  return {
+    ...project,
+    id: form.id || "preview",
+    slug: form.slug,
+    title: form.title,
+    category: form.category,
+    role: form.role,
+    summary: form.summary,
+    challenge: form.challenge,
+    contribution: form.contribution,
+    solution: form.solution,
+    status: form.status as Project["status"],
+    demoStatus: form.demoStatus as Project["demoStatus"],
+    technologies: technologies.map((name) => ({
+      technology: { id: name, name },
+    })),
+  };
+}
+
 export type { ProjectForm };
 export {
   blankProject,
@@ -198,5 +219,6 @@ export {
   contactKinds,
   fieldLabel,
   projectToForm,
+  projectFormToProject,
   toProjectPayload,
 };

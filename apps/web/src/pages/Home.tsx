@@ -21,20 +21,6 @@ import { useRef } from "react";
 import SceneBoundary from "../components/SceneBoundary";
 const HeroScene = lazy(() => import("../components/HeroScene"));
 
-function useProfile() {
-  const [profile, setProfile] = useState<SiteProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  useEffect(() => {
-    api
-      .profile()
-      .then((data) => { setProfile(data); setError(false); })
-      .catch(() => { setProfile(null); setError(true); })
-      .finally(() => setLoading(false));
-  }, []);
-  return { profile, loading, error };
-}
-
 function useProfileFacts() {
   const [facts, setFacts] = useState<ProfileFact[]>([]);
   useEffect(() => {
@@ -86,6 +72,15 @@ function ctaProps(url: string) {
   return url.startsWith("http")
     ? { href: url, target: "_blank", rel: "noreferrer" }
     : { href: url };
+}
+
+function previewImage(project?: ReturnType<typeof useFeaturedProjects>["projects"][number]) {
+  return (
+    project?.hoverPreviewImageUrl ||
+    project?.highlightImageUrl ||
+    project?.coverImageUrl ||
+    ""
+  );
 }
 
 // ── Section heading ─────────────────────────────────────────────────────────────
@@ -332,9 +327,9 @@ function WorkSection() {
               transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
               aria-hidden="true"
             >
-              {displayedProjects[preview.index]?.coverImageUrl ? (
+              {previewImage(displayedProjects[preview.index]) ? (
                 <img
-                  src={displayedProjects[preview.index].coverImageUrl ?? ""}
+                  src={previewImage(displayedProjects[preview.index])}
                   alt=""
                 />
               ) : (
@@ -400,14 +395,14 @@ function AboutSection({
               <span className="chip-path chip-path-top" aria-hidden="true" />
               <span className="chip-path chip-path-right" aria-hidden="true" />
               <span className="chip-path chip-path-bottom" aria-hidden="true" />
-              <div className="about-photo">
+              <div className="about-photo" data-label={profile.shortName}>
                 {profile.portraitImageUrl ? (
                   <img
                     src={profile.portraitImageUrl}
                     alt={profile.portraitImageAlt ?? ""}
                   />
                 ) : (
-                  <span className="mono-label">Portrait placeholder</span>
+                  <span className="mono-label">{profile.shortName}</span>
                 )}
               </div>
             </div>
@@ -565,8 +560,16 @@ function ResearchSection() {
 }
 
 // ── Contact ─────────────────────────────────────────────────────────────────────
-function ContactSection({ links }: { links: ContactLink[] }) {
+function ContactSection({
+  links,
+  settings,
+}: {
+  links: ContactLink[];
+  settings: Record<string, string>;
+}) {
   const primary = links.find((link) => link.isPrimary) ?? links[0];
+  const headline = settings.contactHeadline ?? "";
+  const headlineLines = headline.split("\n");
   const quickLinks = [
     primary,
     ...links
@@ -588,21 +591,22 @@ function ContactSection({ links }: { links: ContactLink[] }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-12 lg:gap-20">
           <Reveal>
-            <p
-              className="text-[clamp(22px,3.8vw,50px)] font-semibold leading-snug"
-              style={{
-                fontFamily: "var(--font-display)",
-                letterSpacing: "-0.025em",
-              }}
-            >
-              Have a system worth making{" "}
-              <em className="hero-em" style={{ fontWeight: 300 }}>
-                simpler
-              </em>
-              ?
-              <br />
-              Let's talk.
-            </p>
+            {headline && (
+              <p
+                className="text-[clamp(22px,3.8vw,50px)] font-semibold leading-snug"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  letterSpacing: "-0.025em",
+                }}
+              >
+                {headlineLines.map((line, index) => (
+                  <span key={index}>
+                    {line}
+                    {index < headlineLines.length - 1 && <br />}
+                  </span>
+                ))}
+              </p>
+            )}
 
             <div className="flex flex-wrap gap-3 mt-10 creative-buttons">
               {quickLinks.map((link) => (
@@ -712,8 +716,17 @@ function Footer({ profile }: { profile: SiteProfile }) {
 }
 
 // ── Page ────────────────────────────────────────────────────────────────────────
-export default function Home() {
-  const { profile, loading: profileLoading, error: profileError } = useProfile();
+export default function Home({
+  profile,
+  settings,
+  loading,
+  error,
+}: {
+  profile: SiteProfile | null;
+  settings: Record<string, string>;
+  loading: boolean;
+  error: boolean;
+}) {
   const facts = useProfileFacts();
   const contactLinks = useContactLinks();
   useEffect(() => {
@@ -761,12 +774,14 @@ export default function Home() {
             <WorkSection />
             <AboutSection profile={profile} facts={facts} />
             <ResearchSection />
-            <ContactSection links={contactLinks} />
+            <ContactSection links={contactLinks} settings={settings} />
           </>
         ) : (
           <section className="min-h-screen grid place-items-center px-6">
-            <p className="mono-label" role={profileError ? "alert" : "status"}>
-              {profileLoading ? "Loading portfolio content..." : "Portfolio content could not be loaded."}
+            <p className="mono-label" role={error ? "alert" : "status"}>
+              {loading
+                ? "Loading portfolio content..."
+                : "Portfolio content could not be loaded."}
             </p>
           </section>
         )}

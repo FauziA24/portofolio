@@ -23,7 +23,7 @@ export function toViewProject(project: Project, index: number): ViewProject {
     year:
       start && end && start !== end ? `${start} - ${end}` : start || end || "-",
     team: project.teamNote,
-    overview: project.summary,
+    overview: project.overview || project.summary,
     tags: project.technologies.map(({ technology }) => technology.name),
     github: safe(project.githubUrl),
     demo: safe(project.demoUrl),

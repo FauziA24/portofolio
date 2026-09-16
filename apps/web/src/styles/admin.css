@@ -181,7 +181,7 @@
 .cms-contact-row select { min-width: 0; }
 .cms-list > .cms-media-row {
   display: grid;
-  grid-template-columns: 84px minmax(150px, 1fr) minmax(150px, 1fr) repeat(4, auto);
+  grid-template-columns: 84px minmax(150px, 1fr) minmax(150px, 1fr) auto repeat(4, auto);
   align-items: center;
 }
 .cms-media-row img {
@@ -192,6 +192,20 @@
   background: var(--cms-deep);
 }
 .cms-media-row input { min-width: 0; }
+.cms-media-role-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.cms-media-roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.cms-media-roles > div { display: grid; min-height: 150px; align-content: start; gap: 8px; overflow: hidden; padding: 12px; }
+.cms-media-roles span { color: var(--muted-foreground); font: 10px var(--font-mono); text-transform: uppercase; }
+.cms-media-roles img { width: 100%; aspect-ratio: 16 / 9; border-radius: 6px; object-fit: cover; }
+.cms-media-roles p { margin: auto; color: var(--muted-foreground); }
+.cms-upload-previews { display: grid; gap: 8px; margin: 14px 0; }
+.cms-upload-preview { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 10px; border: 1px solid var(--cms-border-soft); border-radius: 7px; padding: 8px; }
+.cms-upload-preview img { width: 72px; aspect-ratio: 4 / 3; border-radius: 5px; object-fit: cover; }
+.cms-upload-preview div { display: grid; min-width: 0; gap: 3px; }
+.cms-upload-preview strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.cms-upload-preview span { color: var(--muted-foreground); font: 10px var(--font-mono); text-transform: capitalize; }
+.cms-upload-preview.failed { border-color: color-mix(in srgb, #ef4444 55%, var(--border)); }
+.cms-project-preview { min-width: 0; flex: 1; overflow: auto; }
 .cms-selected-row strong { color: var(--foreground); }
 .cms-check {
   display: flex;
@@ -242,6 +256,7 @@
   .cms-list > .cms-research-row { grid-template-columns: 1fr; }
   .cms-list > .cms-contact-row { grid-template-columns: 1fr; }
   .cms-list > .cms-media-row { grid-template-columns: 1fr; }
+  .cms-media-roles { grid-template-columns: 1fr; }
   .cms-page-head, .cms-editor-head { display: grid; }
   .cms-actions { justify-content: flex-start; }
 }

@@ -33,7 +33,7 @@ The existing public portfolio remains the source of truth for public layout and 
 - Public pages are usable on mobile, with a keyboard, and with reduced motion enabled.
 - The admin can sign in with email and password, sign out, and recover safely from an expired session.
 - The admin can create, edit, order, preview, publish, archive, and delete portfolio content without deployment or code edits.
-- Every public image can be managed by URL or persistent upload, has alt text where required, and remains available after a reload.
+- Every project image is managed through persistent upload in the CMS, has alt text where required, and remains available after a reload.
 - A draft or archived project can be previewed but cannot leak into public queries, search indexes, sitemap output, or public next-project navigation.
 - Production deployment has HTTPS, database backups, a health endpoint, and no repository-stored credentials.
 - Production build, type checks, API tests, and the critical public/CMS smoke flows pass.
@@ -128,7 +128,7 @@ The existing public portfolio remains the source of truth for public layout and 
 - Display the project catalog with title, category, publication status, and demo status.
 - Select or unselect at most five projects and show a visible limit-reached state.
 - Reorder selections with up/down controls and show their one-based public order.
-- Configure a hover-preview image for each selected project by URL or persistent upload and show a thumbnail/error preview.
+- Configure a hover-preview image from an uploaded project asset and show a thumbnail/error preview.
 - Image fallback order is hover preview, highlight image, cover image.
 - Draft and archived projects may be configured in the CMS for planning, but public Selected Work returns published projects only.
 
@@ -136,6 +136,7 @@ The existing public portfolio remains the source of truth for public layout and 
 
 - Project list shows title, category, publication status, demo status, and current selection/featured order. Empty and no-selection states provide an Add project action.
 - Create, edit, save, preview, change publication status, archive, and delete projects.
+- Provide separate `Save draft` and `Save` actions. `Save draft` always persists `DRAFT`; publication validation applies when saving as `PUBLISHED`.
 - Group the editor into Info, Content, Media, and SEO & Links.
 
 Required project fields and behavior:
@@ -147,10 +148,10 @@ Required project fields and behavior:
 | Media | cover image, highlight image, hover preview image, gallery items |
 | SEO & Links | SEO title, SEO description, SEO/OG image, canonical URL, indexing toggle, live demo URL, GitHub URL |
 
-- Required before publication: title, slug, category, role, summary, overview, challenge, contribution, solution, valid date range, and at least one technology. Drafts may be incomplete.
+- Required before publication: title, slug, category, role, summary, overview, challenge, contribution, solution, valid date range, and at least one technology. Drafts require only a title and unique slug, and may otherwise be incomplete.
 - Slugs are normalized and unique. Changing a published slug requires a redirect strategy or an explicit warning.
-- Gallery items support persistent upload or HTTP(S) URL, alt text, optional caption, media kind, ordering, highlight selection, replacement, and deletion.
-- Uploaded files are validated for allowed image type, size, and dimensions before storage. Local `blob:` URLs are preview-only and must never be persisted.
+- Project media uses persistent upload rather than manually entered image URLs. Gallery items support multiple file selection, alt text, optional caption, ordering, cover/highlight/hover selection, replacement, and deletion.
+- Uploaded files show queued, uploading, ready, or failed preview states and are validated for allowed image type, size, and dimensions before storage. Local preview data is never persisted.
 - Publication and demo status are independent. Non-live demo states render disabled public actions even if a demo URL exists.
 
 ### 8.7 Project preview
@@ -159,7 +160,7 @@ Required project fields and behavior:
 - Preview works before publication and uses current unsaved form values without making them public.
 - Provide desktop, tablet, and mobile widths plus dark/light theme switching.
 - Show `Draft Preview` or `Unpublished Preview` when relevant.
-- Include Back to editor. Show Open public page only for a published project with a valid slug.
+- Include Back to CMS/editor without navigating to the landing page. Show Open public page only for a published project with a valid slug.
 - Preview includes project metadata, actions, cover/highlight media, content sections, technologies, gallery, and next-project area. Demo disabled states match public behavior.
 
 ### 8.8 About
@@ -210,7 +211,7 @@ Required project fields and behavior:
 | `ContactLink` | label, value, url, kind, sortOrder, isPrimary, isVisible |
 | `ResearchItem` | type, title, issuerOrVenue, dateLabel, doi, url, sortOrder, isVisible |
 | `Project` | current project fields plus overview, highlight/hover media, sort fields, SEO fields, canonical URL, isIndexed, timestamps |
-| `ProjectMedia` | projectId, asset/url, altText, caption, kind, sortOrder, isHighlighted |
+| `ProjectMedia` | projectId, media asset, legacy URL fallback, altText, caption, kind, sortOrder, isHighlighted |
 | `MediaAsset` | storage key/url, original name, MIME type, byte size, dimensions, timestamps; required only for persistent uploads |
 | `SitePreference` | narrowly scoped persisted site/admin settings; no arbitrary command or secret values |
 
@@ -317,7 +318,7 @@ The migration is an integration into the existing monorepo, not a second standal
 
 - Real single-admin authentication and CMS shell.
 - Profile & Homepage, Selected Work, Projects, project preview, About, Research & Credentials, Contact, and SEO editors backed by PostgreSQL.
-- URL media plus persistent uploads for the upload controls already present in the approved CMS design.
+- Persistent project-media uploads with multi-file selection and immediate draft previews.
 - Public pages driven by CMS data.
 - Dashboard route with real connection states; metrics appear only when backed by data.
 - Site information and password change in Settings.

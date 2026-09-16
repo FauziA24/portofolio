@@ -13,6 +13,11 @@ export function SettingsEditor({ page }: { page: "seo" | "settings" }) {
     robotsPolicy: "allow",
     deploymentTarget: "",
     contactNotificationEmail: "",
+    availabilityLabel: "",
+    contactHeadline: "",
+    projectsKicker: "",
+    projectsTitle: "",
+    projectsDescription: "",
   });
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
@@ -103,6 +108,49 @@ export function SettingsEditor({ page }: { page: "seo" | "settings" }) {
                   value={settings.contactNotificationEmail ?? ""}
                   onChange={(event) =>
                     update("contactNotificationEmail", event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Availability badge">
+                <input
+                  value={settings.availabilityLabel ?? ""}
+                  onChange={(event) =>
+                    update("availabilityLabel", event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Contact headline" wide>
+                <textarea
+                  rows={3}
+                  value={settings.contactHeadline ?? ""}
+                  onChange={(event) =>
+                    update("contactHeadline", event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Projects kicker">
+                <input
+                  value={settings.projectsKicker ?? ""}
+                  onChange={(event) =>
+                    update("projectsKicker", event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Projects title">
+                <input
+                  value={settings.projectsTitle ?? ""}
+                  onChange={(event) =>
+                    update("projectsTitle", event.target.value)
+                  }
+                  placeholder="All selected *work.*"
+                />
+              </Field>
+              <Field label="Projects description" wide>
+                <textarea
+                  rows={3}
+                  value={settings.projectsDescription ?? ""}
+                  onChange={(event) =>
+                    update("projectsDescription", event.target.value)
                   }
                 />
               </Field>

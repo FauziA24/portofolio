@@ -83,7 +83,7 @@ S3_BUCKET="portfolio"
 S3_ACCESS_KEY_ID="replace-with-s3-access-key"
 S3_SECRET_ACCESS_KEY="replace-with-s3-secret-key"
 S3_FORCE_PATH_STYLE="true"
-S3_PUBLIC_URL="http://localhost:8333/portfolio"
+S3_PUBLIC_URL="http://localhost:8888/buckets/portfolio"
 ```
 
 4. Run migrations and seed initial content.
@@ -169,7 +169,7 @@ Nginx should reverse proxy to the containers:
 - `/health/storage` to `http://portfolio-api:3001/health/storage`
 - `/sitemap.xml` to `http://portfolio-api:3001/sitemap.xml`
 - `/robots.txt` to `http://portfolio-api:3001/robots.txt`
-- `/s3/` to `http://seaweed-s3:8333/`
+- `/s3/` to the SeaweedFS filer path `http://seaweed-filer:8888/buckets/`
 
 If the server uses different container names, update `DATABASE_URL` and `S3_ENDPOINT`. Nginx can reach the app as `portfolio-web` and `portfolio-api` because Docker Compose assigns those aliases on `service_service_network`.
 

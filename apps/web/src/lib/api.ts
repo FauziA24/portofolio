@@ -8,10 +8,13 @@ import type {
   SiteProfile,
 } from "../types";
 
-const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+const apiUrl =
+  import.meta.env.VITE_API_URL ||
+  (isLocalhost ? `${window.location.protocol}//${window.location.hostname}:3001` : "");
 let csrfToken = "";
 const request = (path: string, init?: RequestInit) =>
-  fetch(`${apiUrl}/api${path}`, init).then(async (response) => {
+  fetch(`${apiUrl}/api${path}`, { cache: "no-store", ...init }).then(async (response) => {
     if (!response.ok)
       throw new Error(
         (await response.json().catch(() => null))?.message ?? "Request failed",
@@ -119,20 +122,22 @@ const projectMediaPayload = (
   item: Omit<ProjectMedia, "id" | "projectId" | "mediaAsset">,
 ) => ({
   mediaAssetId: item.mediaAssetId || null,
-  url: item.url || null,
+  url: item.mediaAssetId ? null : item.url || null,
   altText: item.altText,
   caption: item.caption || null,
   kind: item.kind,
   sortOrder: item.sortOrder,
   isHighlighted: item.isHighlighted,
 });
-export const fileToBase64 = (file: File) =>
+export const fileToDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+    reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+export const fileToBase64 = async (file: File) =>
+  (await fileToDataUrl(file)).split(",")[1] ?? "";
 
 export const api = {
   publicProjects: () => request("/projects") as Promise<Project[]>,

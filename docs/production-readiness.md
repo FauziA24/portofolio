@@ -15,6 +15,7 @@ Use this checklist before deployment and after every major refactor.
 - Prefer static frontend hosting/CDN for `apps/web/dist`.
 - Keep the Fastify API outside serverless functions when traffic may grow or upload traffic is frequent.
 - Serve media from `S3_PUBLIC_URL` through R2/S3-compatible CDN, not through the API.
+- For SeaweedFS, point `S3_PUBLIC_URL` at the browser-readable filer/CDN path (`/buckets/{bucket}`), not the authenticated S3 API endpoint.
 - Keep admin pages lazy-loaded so visitors do not download CMS code.
 - Keep 3D scene dependencies in the isolated `scene-vendor` chunk so CDN caching absorbs repeat traffic.
 - Load the 3D scene only after the initial hero render, only on desktop-width screens, and skip it for reduced-motion or data-saver users.
