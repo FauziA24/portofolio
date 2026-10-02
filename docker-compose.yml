@@ -2,7 +2,7 @@ name: fauzi-portfolio
 
 services:
   api:
-    image: fauzia24/portofolio-api:v1.0.0
+    image: fauzia24/portofolio:${API_IMAGE_TAG:-api-v1.0.8}
     container_name: portfolio-api
     restart: unless-stopped
     ports:
@@ -13,18 +13,21 @@ services:
           - portfolio-api
           - api
       database_database_network:
-      project_network:
+      projek_network:
         aliases:
           - portfolio-api
           - api
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-portfolio}:${POSTGRES_PASSWORD:-portfolio}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-portfolio}
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@${POSTGRES_HOST:?POSTGRES_HOST public VPS IP is required}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:?POSTGRES_DB is required}
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-5}
       PORT: 3001
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TRUST_PROXY: "true"
       API_BODY_LIMIT_BYTES: ${API_BODY_LIMIT_BYTES:-6291456}
       CORS_ORIGIN: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@portfolio.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT is required}
       S3_REGION: ${S3_REGION:-auto}
       S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
@@ -41,7 +44,7 @@ services:
       '
 
   web:
-    image: fauzia24/portofolio-web:v1.0.0
+    image: fauzia24/portofolio:${WEB_IMAGE_TAG:-web-v1.0.8}
     container_name: portfolio-web
     restart: unless-stopped
     ports:
@@ -50,7 +53,7 @@ services:
       service_service_network:
         aliases:
           - portfolio-web
-      project_network:
+      projek_network:
         aliases:
           - portfolio-web
 networks:
@@ -58,5 +61,5 @@ networks:
     external: true
   database_database_network:
     external: true
-  project_network:
+  projek_network:
     external: true

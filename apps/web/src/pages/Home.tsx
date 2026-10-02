@@ -8,7 +8,7 @@ import type {
   ResearchItem,
   SiteProfile,
 } from "../types";
-import { mediaImageStyle } from "../lib/media";
+import { ABOUT_PORTRAIT_ASPECT_RATIO, mediaImageStyle } from "../lib/media";
 import Reveal from "../components/Reveal";
 import { lazy, Suspense } from "react";
 import {
@@ -387,9 +387,9 @@ function AboutSection({
     cropZoom: profile.portraitCropZoom,
     focalX: profile.portraitFocalX,
     focalY: profile.portraitFocalY,
-    aspectRatio: profile.portraitAspectRatio,
-    displayWidth: profile.portraitDisplayWidth,
-    displayHeight: profile.portraitDisplayHeight,
+    aspectRatio: ABOUT_PORTRAIT_ASPECT_RATIO,
+    displayWidth: null,
+    displayHeight: null,
   };
   return (
     <section

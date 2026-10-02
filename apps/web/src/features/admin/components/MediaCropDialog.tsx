@@ -101,7 +101,7 @@ export function MediaCropDialog({
         </header>
 
         <div
-          className={`cms-crop-stage${dragging ? " dragging" : ""}`}
+          className={`cms-crop-stage${layoutAspectRatio ? " layout-locked" : ""}${dragging ? " dragging" : ""}`}
           style={{ aspectRatio: layoutAspectRatio ?? (draft.aspectRatio === "auto" ? "4 / 3" : draft.aspectRatio) }}
           onPointerDown={startDrag}
           onPointerMove={moveImage}

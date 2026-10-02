@@ -26,6 +26,9 @@ export function normalizeStoredMediaUrl(
   if (!value) return value ?? null;
   try {
     const current = new URL(value);
+    const apiMediaMatch = current.pathname.match(/\/api\/media\/(.+)$/);
+    if (apiMediaMatch?.[1]) return publicMediaUrl(publicBaseUrl, decodeURIComponent(apiMediaMatch[1]));
+
     const endpoint = new URL(storageEndpoint);
     const bucketPath = `${endpoint.pathname.replace(/\/+$/, "")}/${bucket}/`;
     if (current.origin !== endpoint.origin || !current.pathname.startsWith(bucketPath)) return value;

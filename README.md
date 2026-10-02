@@ -123,10 +123,10 @@ The containers join these external Docker networks:
 Build and push the images from your development machine:
 
 ```bash
-docker build --target app -t fauzia24/portofolio-api:v1.0.0 .
-docker build --target web -t fauzia24/portofolio-web:v1.0.0 .
-docker push fauzia24/portofolio-api:v1.0.0
-docker push fauzia24/portofolio-web:v1.0.0
+docker build --target app -t fauzia24/portofolio:api-v1.0.8 .
+docker build --target web -t fauzia24/portofolio:web-v1.0.8 .
+docker push fauzia24/portofolio:api-v1.0.8
+docker push fauzia24/portofolio:web-v1.0.8
 ```
 
 Prepare the server environment:
@@ -172,6 +172,8 @@ Nginx should reverse proxy to the containers:
 - `/s3/` to the SeaweedFS filer path `http://seaweed-filer:8888/buckets/`
 
 If the server uses different container names, update `DATABASE_URL` and `S3_ENDPOINT`. Nginx can reach the app as `portfolio-web` and `portfolio-api` because Docker Compose assigns those aliases on `service_service_network`.
+
+The domain and image names use `portofolio`, but Docker service aliases use `portfolio-web` and `portfolio-api`. Keep the aliases exactly like that in Nginx.
 
 When the API container starts, it runs database migrations, checks or creates the storage bucket, seeds initial data, and then starts the server. The web container serves the built frontend through Nginx.
 

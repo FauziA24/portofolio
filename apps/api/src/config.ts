@@ -6,6 +6,17 @@ try {
   if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
 }
 
+if (!process.env.DATABASE_URL) {
+  const { POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_DB } = process.env;
+  const POSTGRES_PORT = process.env.POSTGRES_PORT ?? "5432";
+
+  if (POSTGRES_USER && POSTGRES_PASSWORD && POSTGRES_HOST && POSTGRES_DB) {
+    process.env.DATABASE_URL = `postgresql://${encodeURIComponent(POSTGRES_USER)}:${encodeURIComponent(
+      POSTGRES_PASSWORD
+    )}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}`;
+  }
+}
+
 const configSchema = z.object({
   DATABASE_URL: z.string().url(),
   DATABASE_POOL_MAX: z.coerce.number().int().positive().default(5),

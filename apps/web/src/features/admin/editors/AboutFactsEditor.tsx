@@ -19,6 +19,58 @@ import type { MediaTransform, ProfileFact, SiteProfile } from "../../../types";
 import type { SaveState } from "../types";
 import { blankFact, blankProfile } from "../forms";
 
+const PORTRAIT_EXPORT_WIDTH = 800;
+const PORTRAIT_EXPORT_HEIGHT = 1000;
+const PORTRAIT_EXPORT_TYPE = "image/jpeg";
+const PORTRAIT_EXPORT_QUALITY = 0.9;
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Portrait preview failed."));
+    image.src = src;
+  });
+}
+
+function blobToDataBase64(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+    reader.onerror = () => reject(new Error("Portrait export failed."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function exportPortraitCrop(src: string, transform: MediaTransform) {
+  const image = await loadImage(src);
+  const canvas = document.createElement("canvas");
+  canvas.width = PORTRAIT_EXPORT_WIDTH;
+  canvas.height = PORTRAIT_EXPORT_HEIGHT;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Portrait export is not supported in this browser.");
+
+  const zoom = Math.max(1, transform.cropZoom / 100);
+  const targetRatio = PORTRAIT_EXPORT_WIDTH / PORTRAIT_EXPORT_HEIGHT;
+  const imageRatio = image.naturalWidth / image.naturalHeight;
+  const sourceWidth = imageRatio > targetRatio
+    ? image.naturalHeight * targetRatio / zoom
+    : image.naturalWidth / zoom;
+  const sourceHeight = imageRatio > targetRatio
+    ? image.naturalHeight / zoom
+    : image.naturalWidth / targetRatio / zoom;
+  const maxX = Math.max(0, image.naturalWidth - sourceWidth);
+  const maxY = Math.max(0, image.naturalHeight - sourceHeight);
+  const sourceX = Math.min(maxX, Math.max(0, image.naturalWidth * (transform.focalX / 100) - sourceWidth / 2));
+  const sourceY = Math.min(maxY, Math.max(0, image.naturalHeight * (transform.focalY / 100) - sourceHeight / 2));
+
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, PORTRAIT_EXPORT_WIDTH, PORTRAIT_EXPORT_HEIGHT);
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((nextBlob) => nextBlob ? resolve(nextBlob) : reject(new Error("Portrait export failed.")), PORTRAIT_EXPORT_TYPE, PORTRAIT_EXPORT_QUALITY),
+  );
+  return blobToDataBase64(blob);
+}
+
 export function AboutFactsEditor() {
   const [facts, setFacts] = useState<ProfileFact[]>([]);
   const [profile, setProfile] = useState<SiteProfile>(blankProfile);
@@ -86,9 +138,9 @@ export function AboutFactsEditor() {
     });
     try {
       const asset = portraitFile ? await api.uploadMedia({
-        fileName: portraitFile.name,
-        mimeType: portraitFile.type,
-        dataBase64: portraitPreview.split(",")[1] ?? "",
+        fileName: portraitFile.name.replace(/\.[^.]+$/, "") + "-about.jpg",
+        mimeType: PORTRAIT_EXPORT_TYPE,
+        dataBase64: await exportPortraitCrop(portraitPreview, transform),
         scope: "profile",
       }) : null;
       setProfile((current) => ({
@@ -98,9 +150,9 @@ export function AboutFactsEditor() {
         portraitCropZoom: transform.cropZoom,
         portraitFocalX: transform.focalX,
         portraitFocalY: transform.focalY,
-        portraitAspectRatio: transform.aspectRatio,
-        portraitDisplayWidth: transform.displayWidth,
-        portraitDisplayHeight: transform.displayHeight,
+        portraitAspectRatio: ABOUT_PORTRAIT_ASPECT_RATIO,
+        portraitDisplayWidth: null,
+        portraitDisplayHeight: null,
       }));
       setPortraitFile(null);
       setCropOpen(false);
